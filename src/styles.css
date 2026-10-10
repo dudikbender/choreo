@@ -1,6 +1,12 @@
-@import 'tailwindcss';
+/*
+ * presentations/* is gitignored, and Tailwind's automatic source detection skips
+ * gitignored files even when they're also listed with @source. Detection is off
+ * so the component glob below is honoured.
+ */
+@import 'tailwindcss' source(none);
 @import 'tw-animate-css';
-@source '../presentations';
+@source '../src';
+@source '../presentations/*/components/*.tsx';
 
 @custom-variant dark (&:is(.dark *));
 
