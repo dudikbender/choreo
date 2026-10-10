@@ -1,0 +1,1103 @@
+<!doctype html>
+<title>Phases, Not Slides</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --ink: #14171b;
+    --ink-soft: #3c4349;
+    --surface-0: #eef0ef;
+    --surface-1: #ffffff;
+    --surface-2: #e4e7e5;
+    --line: #d4d8d6;
+    --accent: #b9791f;
+    --accent-strong: #9c6a1e;
+    --accent-bg: rgba(184, 121, 31, 0.1);
+    --accent-bg-strong: rgba(184, 121, 31, 0.16);
+    --code-bg: #1b1f23;
+    --code-text: #e7e5df;
+    --code-line: #30363c;
+    --shadow:
+      0 1px 2px rgba(20, 23, 27, 0.04), 0 8px 24px rgba(20, 23, 27, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #ecedec;
+      --ink-soft: #a7adb1;
+      --surface-0: #14171b;
+      --surface-1: #1b1f24;
+      --surface-2: #232830;
+      --line: #2a3137;
+      --accent: #efb157;
+      --accent-strong: #f2c27e;
+      --accent-bg: rgba(239, 177, 87, 0.1);
+      --accent-bg-strong: rgba(239, 177, 87, 0.16);
+      --code-bg: #0f1215;
+      --code-text: #e7e5df;
+      --code-line: #272c31;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #ecedec;
+    --ink-soft: #a7adb1;
+    --surface-0: #14171b;
+    --surface-1: #1b1f24;
+    --surface-2: #232830;
+    --line: #2a3137;
+    --accent: #efb157;
+    --accent-strong: #f2c27e;
+    --accent-bg: rgba(239, 177, 87, 0.1);
+    --accent-bg-strong: rgba(239, 177, 87, 0.16);
+    --code-bg: #0f1215;
+    --code-text: #e7e5df;
+    --code-line: #272c31;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--surface-0);
+    color: var(--ink);
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+      sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+  }
+
+  a {
+    color: var(--accent-strong);
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent-bg-strong);
+  }
+  a:hover {
+    border-bottom-color: var(--accent-strong);
+  }
+  a:focus-visible,
+  button:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 2px;
+  }
+
+  /* ---------- shell ---------- */
+
+  .shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 860px) {
+    .shell {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ---------- keyframe rail ---------- */
+
+  .rail {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 48px 0 48px 36px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (max-width: 860px) {
+    .rail {
+      display: none;
+    }
+  }
+
+  .rail-track {
+    position: relative;
+    padding-left: 22px;
+    border-left: 1px solid var(--line);
+  }
+
+  .rail-item {
+    position: relative;
+    display: block;
+    padding: 7px 0 7px 16px;
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.01em;
+    color: var(--ink-soft);
+    border-bottom: none;
+  }
+
+  .rail-item::before {
+    content: "";
+    position: absolute;
+    left: -22px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    background: var(--surface-0);
+    border: 1.5px solid var(--line);
+    transform: translate(-3.5px, -50%) rotate(45deg);
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .rail-item.is-active {
+    color: var(--ink);
+  }
+
+  .rail-item.is-active::before {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: translate(-3.5px, -50%) rotate(45deg) scale(1.2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rail-item::before {
+      transition: none;
+    }
+  }
+
+  /* ---------- main column ---------- */
+
+  main {
+    padding: 56px 40px 120px;
+    min-width: 0;
+  }
+
+  @media (max-width: 640px) {
+    main {
+      padding: 40px 20px 90px;
+    }
+  }
+
+  .measure {
+    max-width: 700px;
+  }
+  .wide {
+    max-width: 920px;
+  }
+
+  header.doc-head {
+    max-width: 700px;
+    margin-bottom: 64px;
+  }
+
+  .eyebrow {
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    margin: 0 0 18px;
+  }
+
+  h1 {
+    font-size: clamp(34px, 5vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+    font-weight: 700;
+  }
+
+  .dek {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+    max-width: 580px;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 18px;
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  section {
+    max-width: 700px;
+    margin: 0 0 76px;
+    scroll-margin-top: 24px;
+  }
+
+  section.wide-section {
+    max-width: 920px;
+  }
+
+  .section-num {
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--accent-strong);
+    margin: 0 0 8px;
+    letter-spacing: 0.04em;
+  }
+
+  h2 {
+    font-size: 26px;
+    letter-spacing: -0.01em;
+    margin: 0 0 20px;
+    text-wrap: balance;
+    font-weight: 700;
+  }
+
+  h3 {
+    font-size: 16px;
+    margin: 0 0 10px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0 0 16px;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+
+  .lede {
+    font-size: 17px;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- principle list ---------- */
+
+  .principles {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin: 28px 0 0;
+    padding: 0;
+  }
+
+  .principle {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 18px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .principle:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 560px) {
+    .principle {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+  }
+
+  .principle dt {
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    color: var(--accent-strong);
+    font-weight: 600;
+  }
+
+  .principle dd {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- code / file blocks ---------- */
+
+  .panel {
+    background: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin: 24px 0;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--code-line);
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: #9aa0a6;
+  }
+
+  .panel pre {
+    margin: 0;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .panel code {
+    color: var(--code-text);
+  }
+  .tok-key {
+    color: #efb157;
+  }
+  .tok-str {
+    color: #9fcba6;
+  }
+  .tok-num {
+    color: #8eb6d9;
+  }
+  .tok-com {
+    color: #6c7278;
+  }
+
+  /* ---------- callouts ---------- */
+
+  .callout {
+    display: grid;
+    grid-template-columns: 3px 1fr;
+    gap: 16px;
+    padding: 2px 0 2px 18px;
+    margin: 0 0 22px;
+  }
+
+  .callout:last-child {
+    margin-bottom: 0;
+  }
+
+  .callout::before {
+    content: "";
+    background: var(--line);
+    border-radius: 2px;
+  }
+
+  .callout.risk::before {
+    background: var(--accent);
+  }
+
+  .callout h3 {
+    margin-bottom: 6px;
+  }
+  .callout p {
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  /* ---------- stack table ---------- */
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  th {
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  td.layer {
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  td.why {
+    color: var(--ink-soft);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    margin: 24px 0;
+  }
+
+  /* ---------- roadmap ---------- */
+
+  .roadmap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 28px;
+  }
+
+  .stage {
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 24px;
+  }
+
+  .stage-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .stage-tag {
+    font-family:
+      ui-monospace, "SF Mono", "Berkeley Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-strong);
+    background: var(--accent-bg);
+    padding: 3px 9px;
+    border-radius: 5px;
+  }
+
+  .stage-goal {
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    margin: 0 0 14px;
+  }
+
+  .stage ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .stage li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 14.5px;
+  }
+
+  .stage li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border: 1.5px solid var(--line);
+    transform: rotate(45deg);
+  }
+
+  .stage.is-mvp li::before {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  /* ---------- non-goals ---------- */
+
+  .nongoals {
+    margin: 24px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nongoals li {
+    padding-left: 18px;
+    position: relative;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+  }
+
+  .nongoals li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--line);
+  }
+
+  footer {
+    max-width: 700px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+</style>
+
+<div class="shell">
+  <nav class="rail" aria-label="Section navigation">
+    <div class="rail-track" id="rail-track">
+      <a class="rail-item" href="#concept" data-target="concept">concept</a>
+      <a class="rail-item" href="#data-model" data-target="data-model"
+        >data model</a
+      >
+      <a class="rail-item" href="#engine" data-target="engine">scroll engine</a>
+      <a class="rail-item" href="#ai-panel" data-target="ai-panel">ai panel</a>
+      <a class="rail-item" href="#editor" data-target="editor">editor</a>
+      <a class="rail-item" href="#present" data-target="present">present</a>
+      <a class="rail-item" href="#export" data-target="export">pdf export</a>
+      <a class="rail-item" href="#stack" data-target="stack">stack</a>
+      <a class="rail-item" href="#studio" data-target="studio">studio</a>
+      <a class="rail-item" href="#roadmap" data-target="roadmap">roadmap</a>
+      <a class="rail-item" href="#risks" data-target="risks">risks</a>
+    </div>
+  </nav>
+
+  <main>
+    <header class="doc-head">
+      <p class="eyebrow">Architecture &amp; build plan</p>
+      <h1>Phases, Not Slides</h1>
+      <p class="dek">
+        A scroll-driven presentation studio: one continuous scroll axis,
+        components that move, rotate, and scale independently through it,
+        authored in natural language and stored as plain files.
+      </p>
+      <div class="meta-row">
+        <span>draft v0.1</span>
+        <span>2026-10-07</span>
+        <span>css transforms only — no webgl</span>
+      </div>
+    </header>
+
+    <section id="concept">
+      <p class="section-num">01</p>
+      <h2>Concept</h2>
+      <p class="lede">
+        A slide deck forces every idea into identically-shaped containers that
+        all change at once. This tool treats a presentation as a single scroll
+        track, divided into named <em>phases</em>, where every component carries
+        its own path through space — independent of its neighbors. The same
+        scroll gesture that advances the narrative also drives the choreography.
+      </p>
+      <dl class="principles">
+        <div class="principle">
+          <dt>Phases, not slides</dt>
+          <dd>
+            A presentation is one continuous scroll track. Phases are named
+            destinations along it — markers for navigation, snapping, and export
+            — not containers that own the motion itself.
+          </dd>
+        </div>
+        <div class="principle">
+          <dt>Independent choreography</dt>
+          <dd>
+            Every component carries its own keyframe path through absolute
+            scroll position — waypoints placed wherever that component needs
+            them, not snapped to phase boundaries. Nothing is required to enter,
+            exit, or move in lockstep with anything else.
+          </dd>
+        </div>
+        <div class="principle">
+          <dt>Presentation as code</dt>
+          <dd>
+            Each presentation is a folder on disk: component source files, one
+            config file, and an assets folder. Legible, diffable, and
+            git-friendly by construction.
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section id="data-model">
+      <p class="section-num">02</p>
+      <h2>Data model: the presentation folder</h2>
+      <p>
+        Every presentation is a self-contained directory. Nothing lives in a
+        database — the folder <em>is</em> the presentation.
+      </p>
+      <div class="panel">
+        <div class="panel-head">
+          <span>workspace/presentations/quarterly-vision/</span>
+        </div>
+        <pre class="mono"><code>quarterly-vision/
+├── presentation.json       <span class="tok-com"># metadata, phases, keyframes</span>
+├── components/
+│   ├── hero-title.tsx
+│   ├── revenue-chart.tsx
+│   └── team-photo.tsx
+└── assets/
+    ├── logo.png
+    └── team-photo.jpg</code></pre>
+      </div>
+      <p>
+        <span class="mono">presentation.json</span> is the single source of
+        truth, validated against a Zod schema shared by the editor, the runtime,
+        and the AI panel's write path:
+      </p>
+      <div class="panel">
+        <div class="panel-head">
+          <span>presentation.json</span><span>abbreviated</span>
+        </div>
+        <pre class="mono"><code>{
+  <span class="tok-key">"meta"</span>: { <span class="tok-key">"title"</span>: <span class="tok-str">"Quarterly Vision"</span>, <span class="tok-key">"aspectRatio"</span>: <span class="tok-str">"16:9"</span> },
+  <span class="tok-key">"phases"</span>: [
+    { <span class="tok-key">"id"</span>: <span class="tok-str">"intro"</span>,  <span class="tok-key">"label"</span>: <span class="tok-str">"Intro"</span>,  <span class="tok-key">"duration"</span>: <span class="tok-num">1200</span> },
+    { <span class="tok-key">"id"</span>: <span class="tok-str">"growth"</span>, <span class="tok-key">"label"</span>: <span class="tok-str">"Growth"</span>, <span class="tok-key">"duration"</span>: <span class="tok-num">1800</span> }
+  ],
+  <span class="tok-key">"components"</span>: [
+    {
+      <span class="tok-key">"id"</span>: <span class="tok-str">"hero-title"</span>,
+      <span class="tok-key">"file"</span>: <span class="tok-str">"components/hero-title.tsx"</span>,
+      <span class="tok-key">"keyframes"</span>: [
+        { <span class="tok-key">"at"</span>: <span class="tok-num">0</span>,    <span class="tok-key">"x"</span>: <span class="tok-num">0</span>,    <span class="tok-key">"z"</span>: <span class="tok-num">0</span>,   <span class="tok-key">"scale"</span>: <span class="tok-num">1</span>,    <span class="tok-key">"opacity"</span>: <span class="tok-num">1</span> },
+        { <span class="tok-key">"at"</span>: <span class="tok-num">900</span>,  <span class="tok-key">"x"</span>: <span class="tok-num">-180</span>, <span class="tok-key">"z"</span>: <span class="tok-num">-30</span>, <span class="tok-key">"scale"</span>: <span class="tok-num">0.85</span>, <span class="tok-key">"opacity"</span>: <span class="tok-num">0.8</span> },
+        { <span class="tok-key">"at"</span>: <span class="tok-num">1600</span>, <span class="tok-key">"x"</span>: <span class="tok-num">-400</span>, <span class="tok-key">"z"</span>: <span class="tok-num">-80</span>, <span class="tok-key">"scale"</span>: <span class="tok-num">0.6</span>,  <span class="tok-key">"opacity"</span>: <span class="tok-num">0.4</span> }
+      ]
+    }
+  ]
+}</code></pre>
+      </div>
+      <p>
+        <span class="mono">at</span> is an absolute offset along the whole
+        scroll track, in the same units as
+        <span class="mono">phase.duration</span> — not a phase id. A keyframe
+        can land in the middle of a phase, right on a boundary, or anywhere
+        else; a component can have as many or as few as it needs, and the schema
+        just requires them sorted by <span class="mono">at</span>.
+      </p>
+      <p>
+        A phase's own start offset is just the sum of every earlier phase's
+        duration, so phases lay out end-to-end along the same axis with no gaps.
+        That start offset is exactly the point every component's inbound motion
+        has finished settling into — which is the offset present-mode snapping
+        and PDF export (§06–§07) both lock onto.
+      </p>
+      <p>
+        Two rules follow directly from this shape. First,
+        <strong>scroll offset is the only input the engine ever reads</strong> —
+        phases are named ranges layered on top of that same axis for navigation,
+        present-mode snapping, and PDF page breaks, but they hold no motion data
+        of their own. Second,
+        <strong>a component holds its last keyframe's value past it</strong>,
+        and interpolates between its two surrounding keyframes everywhere else —
+        which is what lets one component sit still for an entire phase while
+        another runs through three keyframes in a few hundred pixels.
+      </p>
+    </section>
+
+    <section id="engine">
+      <p class="section-num">03</p>
+      <h2>Scroll &amp; animation engine</h2>
+      <p>
+        The engine reads exactly one input: the raw scroll offset. Each
+        component independently looks up its own keyframe array for the two
+        keyframes bracketing the current offset and interpolates between them —
+        phase boundaries never enter that calculation. A separate, much lighter
+        lookup maps the same raw offset to "which phase is active," purely for
+        UI concerns: a progress indicator, a present-mode label, a highlighted
+        row in the editor's timeline. That lookup has no influence on how any
+        component actually moves.
+      </p>
+      <p>
+        Two constraints keep this fast and keep it feeling spatial rather than
+        flat:
+      </p>
+      <ul class="measure">
+        <li style="margin-bottom: 10px">
+          Transforms are applied as
+          <span class="mono">translate3d / rotate / scale</span> and
+          <span class="mono">opacity</span> only — never
+          <span class="mono">top/left</span> — so every change stays on the
+          GPU-accelerated compositing path.
+        </li>
+        <li style="margin-bottom: 10px">
+          Scroll state lives in a selector-based store (Zustand/Jotai), so a
+          scroll tick re-renders only the components whose
+          <em>computed</em> transform actually changed — not the whole tree.
+          With dozens of independently-animating components, this is the
+          difference between smooth and unusable.
+        </li>
+        <li>
+          The stage container uses CSS <span class="mono">perspective</span> +
+          <span class="mono">transform-style: preserve-3d</span>, so
+          <span class="mono">rotateX/Y/Z</span> and
+          <span class="mono">translateZ</span> read as genuine depth — real
+          spatial motion without a WebGL canvas.
+        </li>
+      </ul>
+    </section>
+
+    <section id="ai-panel">
+      <p class="section-num">04</p>
+      <h2>The AI generation panel</h2>
+      <p>
+        Natural-language authoring is built into the app, not bolted on through
+        an external CLI. A server function calls the Claude API directly and
+        runs a small, deliberately scoped tool-use loop:
+        <span class="mono">read_file</span>,
+        <span class="mono">list_files</span>,
+        <span class="mono">write_component</span>,
+        <span class="mono">propose_keyframes</span> — every tool constrained to
+        that one presentation's folder.
+      </p>
+      <p>
+        Every component the panel writes is held to a fixed authoring contract,
+        enforced in the system prompt and checked before anything touches disk:
+      </p>
+      <ul class="measure">
+        <li style="margin-bottom: 10px">
+          Default-exports a React component that accepts one
+          <span class="mono">style</span> prop — the already-resolved transform
+          and opacity. A component never reads scroll position itself.
+        </li>
+        <li style="margin-bottom: 10px">
+          Styled with Tailwind, which the model generates far more reliably than
+          ad-hoc CSS.
+        </li>
+        <li>Self-contained — no implicit dependency on sibling components.</li>
+      </ul>
+      <p>
+        Proposed changes — new files, edited files, keyframe updates — surface
+        as a diff for approval before they're committed to the folder, the same
+        trust model Claude Code uses for file edits. The config schema validates
+        the result either way, so a bad generation can't silently corrupt
+        <span class="mono">presentation.json</span>.
+      </p>
+    </section>
+
+    <section id="editor">
+      <p class="section-num">05</p>
+      <h2>Editor mode</h2>
+      <p>
+        A canvas shows whatever the current scroll offset renders. A timeline at
+        the bottom scrubs along that same absolute scroll axis like a video
+        editor's playhead, with phase ranges drawn as labeled bands behind it.
+        Each component gets its own row, its keyframes drawn as diamonds at
+        their real offsets — free to land anywhere, inside one phase or spanning
+        several. A sidebar lists components; a properties panel edits the
+        selected component's nearest keyframe numerically. Dragging a component
+        on the canvas moves its nearest keyframe, or inserts a new one at the
+        exact scrub position if none is close enough. The natural-language panel
+        from §04 docks alongside as a fourth way to make the same edits.
+      </p>
+    </section>
+
+    <section id="present">
+      <p class="section-num">06</p>
+      <h2>Present / preview mode</h2>
+      <p>
+        The same engine, full-screen, driven by real wheel/trackpad/touch
+        scrolling. An optional snap-to-phase mode makes it behave like a deck
+        again when presenting live — click or arrow-key to the next phase's
+        start offset instead of scrolling freely, landing on exactly the resting
+        position §07 also captures for export. Speaker-facing affordances (phase
+        labels, elapsed progress, notes) are a v2 concern, not required to
+        validate the core idea.
+      </p>
+    </section>
+
+    <section id="export">
+      <p class="section-num">07</p>
+      <h2>PDF export</h2>
+      <p>
+        Each phase's start becomes one PDF page. A phase's start offset (§02)
+        is, by construction, the moment every component has finished arriving —
+        the last keyframe any of them needed to reach has already passed, so
+        what's on screen is a settled composition rather than something
+        mid-flight. That's the "slide" worth capturing.
+      </p>
+      <p>
+        A dedicated static route locks scroll directly to a given phase's start
+        offset and lets the ordinary engine compute every component's transform
+        from its own keyframes — there's no separate "phase snapshot" to store
+        or let drift out of sync. Headless Chromium (Playwright) screenshots
+        that route once per phase at high resolution, in phase order; the images
+        are composed into a PDF with <span class="mono">pdf-lib</span>.
+      </p>
+      <p>
+        Screenshots over vector output, deliberately: fidelity to exactly what's
+        on screen matters more here than file size, and raster degrades
+        gracefully if a component ever gets visually more complex than plain
+        CSS.
+      </p>
+    </section>
+
+    <section id="stack" class="wide-section">
+      <p class="section-num">08</p>
+      <h2>Tech stack</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Choice</th>
+              <th>Why</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="layer">App shell</td>
+              <td>TanStack Start + Router</td>
+              <td class="why">
+                Full-stack React with file-based routing; server functions cover
+                the AI panel and PDF export without a separate backend service.
+              </td>
+            </tr>
+            <tr>
+              <td class="layer">State</td>
+              <td>Zustand / Jotai</td>
+              <td class="why">
+                Selector-based subscriptions keep scroll updates cheap with many
+                independently-animating components.
+              </td>
+            </tr>
+            <tr>
+              <td class="layer">Motion</td>
+              <td>Framer Motion (apply layer) + custom phase engine</td>
+              <td class="why">
+                Framer handles GPU-accelerated transform application; the
+                phase/keyframe logic itself is custom, since Framer's built-in
+                scroll triggers assume slide-like, uniform behavior.
+              </td>
+            </tr>
+            <tr>
+              <td class="layer">Styling</td>
+              <td>Tailwind CSS</td>
+              <td class="why">
+                The most reliable generation target for the AI panel.
+              </td>
+            </tr>
+            <tr>
+              <td class="layer">AI</td>
+              <td>Anthropic TypeScript SDK, Claude Opus 5</td>
+              <td class="why">
+                Scoped tool-use loop against a single presentation folder, per
+                §04.
+              </td>
+            </tr>
+            <tr>
+              <td class="layer">Storage</td>
+              <td>Local filesystem</td>
+              <td class="why">
+                Matches the "presentation is a folder" model directly; swappable
+                for cloud storage later without touching the config schema.
+              </td>
+            </tr>
+            <tr>
+              <td class="layer">PDF</td>
+              <td>Playwright + pdf-lib</td>
+              <td class="why">
+                Screenshot-per-phase, composed into a PDF, per §07.
+              </td>
+            </tr>
+            <tr>
+              <td class="layer">Validation</td>
+              <td>Zod</td>
+              <td class="why">
+                One schema shared by the editor, the runtime, and the AI
+                tool-use loop.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="studio">
+      <p class="section-num">09</p>
+      <h2>Studio: many presentations, one app</h2>
+      <p>
+        A workspace root is configured once. The dashboard scans it for
+        presentation folders and lists them; each opens into
+        <span class="mono">/studio/:id/edit</span> or
+        <span class="mono">/studio/:id/present</span>. Creating a new
+        presentation scaffolds the folder structure from §02 and, optionally,
+        seeds a first pass of components and config straight from one
+        natural-language description.
+      </p>
+    </section>
+
+    <section id="roadmap">
+      <p class="section-num">10</p>
+      <h2>Roadmap</h2>
+      <div class="roadmap">
+        <div class="stage is-mvp">
+          <div class="stage-head">
+            <span class="stage-tag">MVP</span>
+            <h3 style="margin: 0">Prove the feeling is real</h3>
+          </div>
+          <p class="stage-goal">
+            Goal: confirm scroll-choreography actually tells a story better than
+            slides, before investing in the editor or AI layer.
+          </p>
+          <ul>
+            <li>Zod config schema + the folder structure from §02</li>
+            <li>
+              Phase/keyframe interpolation hook, hand-authored config, 2–3 real
+              components
+            </li>
+            <li>Plain present-mode route — no editor, no AI yet</li>
+          </ul>
+        </div>
+        <div class="stage">
+          <div class="stage-head">
+            <span class="stage-tag">V1</span>
+            <h3 style="margin: 0">A usable personal tool</h3>
+          </div>
+          <ul>
+            <li>Studio dashboard — list and create presentations</li>
+            <li>Visual editor: canvas, phase timeline, properties panel</li>
+            <li>AI generation panel — scoped tools, diff-and-approve flow</li>
+            <li>PDF export</li>
+          </ul>
+        </div>
+        <div class="stage">
+          <div class="stage-head">
+            <span class="stage-tag">V2</span>
+            <h3 style="margin: 0">Polish &amp; power</h3>
+          </div>
+          <ul>
+            <li>Per-keyframe easing curves</li>
+            <li>Asset manager with drag-and-drop import</li>
+            <li>
+              Undo/redo; git-backed history (the folder is already git-friendly)
+            </li>
+            <li>
+              Components with their own internal micro-timelines — e.g. a chart
+              animating its own bars across one phase's scroll range
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top: 24px; font-size: 14.5px">
+        <strong>Deliberately out of scope for now:</strong>
+      </p>
+      <ul class="nongoals">
+        <li>
+          Multi-user accounts, auth, or hosted sharing links —
+          personal/small-business use for now
+        </li>
+        <li>
+          Branching or non-linear phase graphs — phases stay a single linear
+          track
+        </li>
+        <li>
+          WebGL/3D meshes — CSS transforms cover the spatial storytelling this
+          needs, without the engineering and compositing cost of a second render
+          pipeline
+        </li>
+      </ul>
+    </section>
+
+    <section id="risks">
+      <p class="section-num">11</p>
+      <h2>Open risks</h2>
+      <div class="callout risk">
+        <h3>Performance under many independent components</h3>
+        <p>
+          The selector-based re-render strategy in §03 needs to be proven at
+          MVP, not assumed — it's the one piece of the architecture the whole
+          "independent choreography" premise rests on.
+        </p>
+      </div>
+      <div class="callout risk">
+        <h3>AI-generated component quality</h3>
+        <p>
+          Mitigated by the fixed authoring contract and schema validation in §04
+          — the plan is to constrain generation tightly rather than trust raw
+          output.
+        </p>
+      </div>
+      <div class="callout risk">
+        <h3>Loading newly-written files without a restart</h3>
+        <p>
+          The AI panel writes new <span class="mono">.tsx</span> files at
+          runtime. Picking them up without a full dev-server restart is the
+          single biggest unproven technical step — worth a dedicated spike
+          early, before V1 is scoped in detail.
+        </p>
+      </div>
+      <div class="callout risk">
+        <h3>The config schema will change</h3>
+        <p>
+          Version <span class="mono">presentation.json</span> from day one so
+          existing presentations can be migrated forward as the shape evolves.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      Draft plan — scope and sequencing to revisit once the MVP in §10 either
+      confirms or kills the core premise.
+    </footer>
+  </main>
+</div>
+
+<script>
+  (function () {
+    var items = Array.prototype.slice.call(
+      document.querySelectorAll(".rail-item"),
+    );
+    var sections = items.map(function (item) {
+      return document.getElementById(item.getAttribute("data-target"));
+    });
+
+    if (!("IntersectionObserver" in window) || items.length === 0) return;
+
+    var current = null;
+
+    function setActive(id) {
+      if (id === current) return;
+      current = id;
+      items.forEach(function (item) {
+        item.classList.toggle(
+          "is-active",
+          item.getAttribute("data-target") === id,
+        );
+      });
+    }
+
+    var observer = new IntersectionObserver(
+      function (entries) {
+        var visible = entries.filter(function (e) {
+          return e.isIntersecting;
+        });
+        if (visible.length === 0) return;
+        visible.sort(function (a, b) {
+          return b.intersectionRatio - a.intersectionRatio;
+        });
+        setActive(visible[0].target.id);
+      },
+      { rootMargin: "-10% 0px -70% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
+    );
+
+    sections.forEach(function (s) {
+      if (s) observer.observe(s);
+    });
+    setActive(sections[0] && sections[0].id);
+  })();
+</script>

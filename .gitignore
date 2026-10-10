@@ -1,0 +1,13 @@
+node_modules
+dist
+.output
+.tanstack
+.vinxi
+*.log
+.DS_Store
+.env
+PLAN.md
+
+# Presentations are personal; only the demo is committed.
+presentations/*
+!presentations/quarterly-vision/

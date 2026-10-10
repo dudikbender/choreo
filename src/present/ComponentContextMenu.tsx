@@ -1,0 +1,326 @@
+import { ChevronLeft, ChevronRight, Code, Copy, MapPinOff, MapPinPlus, RotateCcw, Sparkles, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '~/components/ui/context-menu'
+import type { Presentation, Stop } from '~/engine/schema'
+import { activePhaseIndex, stopOffsets } from '~/engine/timeline'
+import type { PhaseRange } from '~/engine/timeline'
+import { saveStops } from '~/server/functions'
+import { ComponentCodeDialog } from './ComponentCodeDialog'
+import { ComponentInstructionDialog } from './ComponentInstructionDialog'
+import type { ComponentTarget } from './ComponentInstructionDialog'
+import { DeleteComponentDialog } from './DeleteComponentDialog'
+
+export const SLOT_ATTRIBUTE = 'data-component-slot'
+
+/** How close (in scroll px) the current position must be to a stop to count as "on" it. */
+const STOP_TOLERANCE = 24
+
+function isVisible(slot: HTMLElement): boolean {
+  const root = slot.firstElementChild
+  if (!root) return false
+  const style = getComputedStyle(root)
+  if (Number(style.opacity) <= 0.05 || style.visibility === 'hidden') return false
+  const rect = root.getBoundingClientRect()
+  return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 && rect.left < innerWidth && rect.top < innerHeight
+}
+
+/**
+ * Every visible component the viewer could mean, topmost first: those under the pointer in
+ * paint order, then those whose box covers the point but don't take pointer events, then the
+ * rest of what's on stage. Invisible components parked over the stage are skipped.
+ */
+export function componentStackAt(x: number, y: number): { ids: string[]; underPointer: number } {
+  const ids: string[] = []
+  const add = (slot: HTMLElement | null) => {
+    const id = slot?.getAttribute(SLOT_ATTRIBUTE)
+    if (slot && id && !ids.includes(id) && isVisible(slot)) ids.push(id)
+  }
+  for (const element of document.elementsFromPoint(x, y)) add(element.closest<HTMLElement>(`[${SLOT_ATTRIBUTE}]`))
+  // Later slots paint over earlier ones.
+  const slots = [...document.querySelectorAll<HTMLElement>(`[${SLOT_ATTRIBUTE}]`)].reverse()
+  for (const slot of slots) {
+    const rect = slot.firstElementChild?.getBoundingClientRect()
+    if (rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) add(slot)
+  }
+  const underPointer = ids.length
+  for (const slot of slots) add(slot)
+  return { ids, underPointer }
+}
+
+export function ComponentContextMenu({
+  presentationId,
+  config,
+  ranges,
+  disabled,
+  onConfigSaved,
+  children,
+}: {
+  presentationId: string
+  config: Presentation
+  ranges: PhaseRange[]
+  disabled: boolean
+  /** Applies a successful save to the on-screen config, mirroring what the server wrote. */
+  onConfigSaved: (update: (config: Presentation) => Presentation) => void
+  children: React.ReactNode
+}) {
+  const [stack, setStack] = useState<{ ids: string[]; underPointer: number; index: number }>({
+    ids: [],
+    underPointer: 0,
+    index: -1,
+  })
+  const [menuOffset, setMenuOffset] = useState(0)
+  const [instructing, setInstructing] = useState<ComponentTarget | null>(null)
+  const [deleting, setDeleting] = useState<ComponentTarget | null>(null)
+  const [editing, setEditing] = useState<ComponentTarget | null>(null)
+  const [notice, setNotice] = useState<{ message: string; error?: boolean } | null>(null)
+  const noticeTimer = useRef<number | undefined>(undefined)
+
+  const stops = stopOffsets(config)
+  const custom = config.stops !== undefined
+  const end = ranges.at(-1)?.end ?? 0
+  const phase = ranges[activePhaseIndex(ranges, menuOffset)]
+  const selected = config.components.find((c) => c.id === stack.ids[stack.index])
+  const menuTarget: ComponentTarget | null =
+    selected && phase
+      ? { componentId: selected.id, file: selected.file, beat: { id: phase.id, label: phase.label } }
+      : null
+  const highlighted = (instructing ?? deleting ?? editing ?? menuTarget)?.componentId
+  const cycle = (step: number) =>
+    setStack((s) => {
+      if (s.ids.length === 0) return s
+      const from = s.index === -1 ? (step > 0 ? -1 : 0) : s.index
+      return { ...s, index: (from + step + s.ids.length) % s.ids.length }
+    })
+  const stopHere = stops
+    .filter((at) => Math.abs(at - menuOffset) <= STOP_TOLERANCE)
+    .sort((a, b) => Math.abs(a - menuOffset) - Math.abs(b - menuOffset))[0]
+
+  useEffect(() => {
+    if (!highlighted) return
+    const slot = document.querySelector(`[${SLOT_ATTRIBUTE}="${highlighted}"]`)
+    slot?.setAttribute('data-targeted', '')
+    return () => slot?.removeAttribute('data-targeted')
+  }, [highlighted])
+
+  useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
+
+  const flash = (message: string, error = false) => {
+    window.clearTimeout(noticeTimer.current)
+    setNotice({ message, error })
+    noticeTimer.current = window.setTimeout(() => setNotice(null), error ? 5000 : 2200)
+  }
+
+  const writeStops = async (next: number[] | null, message: string) => {
+    try {
+      const report = await saveStops({ data: { id: presentationId, stops: next } })
+      if (report.errors.length > 0) {
+        flash(report.errors.join(' · '), true)
+        return
+      }
+      const sorted = next && [...new Set(next.map(Math.round))].sort((a, b) => a - b)
+      const stops: Stop[] | undefined = sorted?.length ? sorted.map((at) => ({ at })) : undefined
+      onConfigSaved((current) => ({ ...current, stops }))
+      flash(message)
+    } catch (error) {
+      flash((error as Error).message, true)
+    }
+  }
+
+  const onContextMenu = (event: React.MouseEvent) => {
+    const offset = Math.min(Math.round(window.scrollY), end)
+    setMenuOffset(offset)
+    const found = componentStackAt(event.clientX, event.clientY)
+    const ids = found.ids.filter((id) => config.components.some((c) => c.id === id))
+    const underPointer = Math.min(found.underPointer, ids.length)
+    setStack({ ids, underPointer, index: underPointer > 0 ? 0 : -1 })
+  }
+
+  return (
+    <>
+      <ContextMenu
+        onOpenChange={(open) => {
+          if (!open) setStack((s) => ({ ...s, index: -1 }))
+        }}
+      >
+        <ContextMenuTrigger asChild disabled={disabled} onContextMenu={onContextMenu}>
+          <div className="contents">{children}</div>
+        </ContextMenuTrigger>
+        <ContextMenuContent
+          className="w-64"
+          onKeyDown={(event) => {
+            if (event.key !== '[' && event.key !== ']') return
+            event.preventDefault()
+            event.stopPropagation()
+            cycle(event.key === ']' ? 1 : -1)
+          }}
+        >
+          {stack.ids.length > (stack.index === -1 ? 0 : 1) && (
+            <>
+              <div className="flex items-center gap-1 px-1 pb-1">
+                <ContextMenuItem
+                  aria-label="Previous component"
+                  className="justify-center px-2"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    cycle(-1)
+                  }}
+                >
+                  <ChevronLeft />
+                </ContextMenuItem>
+                <span className="flex-1 text-center text-xs text-neutral-500">
+                  {stack.index === -1 ? (
+                    `${stack.ids.length} on stage`
+                  ) : (
+                    <>
+                      <span className="text-neutral-300">
+                        {stack.index + 1} / {stack.ids.length}
+                      </span>{' '}
+                      · {stack.index < stack.underPointer ? 'under cursor' : 'elsewhere'}
+                    </>
+                  )}
+                </span>
+                <ContextMenuItem
+                  aria-label="Next component"
+                  className="justify-center px-2"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    cycle(1)
+                  }}
+                >
+                  <ChevronRight />
+                </ContextMenuItem>
+              </div>
+              <ContextMenuSeparator />
+            </>
+          )}
+          {menuTarget ? (
+            <>
+              <ContextMenuLabel className="flex flex-col gap-0.5">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="truncate font-mono text-sm text-neutral-100">{menuTarget.componentId}</span>
+                  {stack.ids.length > 1 && (
+                    <span className="shrink-0 text-[10px] font-normal text-neutral-600">
+                      <kbd className="font-mono">[</kbd> <kbd className="font-mono">]</kbd> to cycle
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs font-normal text-neutral-500">
+                  {menuTarget.file} · {menuTarget.beat.label}
+                </span>
+              </ContextMenuLabel>
+              <ContextMenuSeparator />
+              <ContextMenuItem onSelect={() => setInstructing(menuTarget)}>
+                <Sparkles />
+                Instruct Claude…
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => setEditing(menuTarget)}>
+                <Code />
+                Edit code…
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => void navigator.clipboard.writeText(menuTarget.file)}>
+                <Copy />
+                Copy file path
+              </ContextMenuItem>
+              <ContextMenuItem variant="destructive" onSelect={() => setDeleting(menuTarget)}>
+                <Trash2 />
+                Delete component…
+              </ContextMenuItem>
+            </>
+          ) : (
+            <ContextMenuLabel className="text-xs font-normal text-neutral-500">
+              {stack.ids.length > 0
+                ? 'No component under the cursor. Use the arrows to pick one on stage.'
+                : 'Right-click a component to instruct Claude about it.'}
+            </ContextMenuLabel>
+          )}
+
+          <ContextMenuSeparator />
+          <ContextMenuLabel className="flex items-baseline justify-between text-xs font-normal text-neutral-500">
+            <span>Stop points · {custom ? `${stops.length} placed` : 'phase starts'}</span>
+            <span className="font-mono">@{menuOffset.toLocaleString()}</span>
+          </ContextMenuLabel>
+          {stopHere === undefined ? (
+            <ContextMenuItem
+              onSelect={() =>
+                void writeStops([...stops, menuOffset], `Stop added at ${menuOffset.toLocaleString()}`)
+              }
+            >
+              <MapPinPlus />
+              Add stop point here
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem
+              disabled={stops.length === 1}
+              onSelect={() =>
+                void writeStops(
+                  stops.filter((at) => at !== stopHere),
+                  `Stop at ${stopHere.toLocaleString()} removed`,
+                )
+              }
+            >
+              <MapPinOff />
+              Remove stop point here
+            </ContextMenuItem>
+          )}
+          {custom && (
+            <ContextMenuItem onSelect={() => void writeStops(null, 'Stops reset to phase starts')}>
+              <RotateCcw />
+              Reset to phase starts
+            </ContextMenuItem>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+
+      {notice && (
+        <div
+          role="status"
+          className={`pointer-events-none fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm shadow-2xl ring-1 backdrop-blur-md ${
+            notice.error ? 'bg-red-950/90 text-red-200 ring-red-800' : 'bg-neutral-950/85 text-neutral-100 ring-white/10'
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
+
+      {instructing && (
+        <ComponentInstructionDialog
+          presentationId={presentationId}
+          target={instructing}
+          onClose={() => setInstructing(null)}
+        />
+      )}
+
+      {editing && (
+        <ComponentCodeDialog
+          presentationId={presentationId}
+          target={editing}
+          onSaved={() => flash(`Saved ${editing.file}`)}
+          onClose={() => setEditing(null)}
+        />
+      )}
+
+      {deleting && (
+        <DeleteComponentDialog
+          presentationId={presentationId}
+          target={deleting}
+          sharedFile={config.components.some((c) => c.id !== deleting.componentId && c.file === deleting.file)}
+          onDeleted={() => {
+            onConfigSaved((current) => ({
+              ...current,
+              components: current.components.filter((c) => c.id !== deleting.componentId),
+            }))
+            flash(`Deleted ${deleting.componentId}`)
+          }}
+          onClose={() => setDeleting(null)}
+        />
+      )}
+    </>
+  )
+}

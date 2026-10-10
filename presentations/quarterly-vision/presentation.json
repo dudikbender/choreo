@@ -1,0 +1,316 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "Quarterly Vision",
+    "aspectRatio": "16:9"
+  },
+  "phases": [
+    {
+      "id": "intro",
+      "label": "Intro",
+      "duration": 1200
+    },
+    {
+      "id": "growth",
+      "label": "Growth",
+      "duration": 1800
+    },
+    {
+      "id": "pie",
+      "label": "Pie",
+      "duration": 1600
+    },
+    {
+      "id": "team",
+      "label": "Team",
+      "duration": 1500
+    }
+  ],
+  "components": [
+    {
+      "id": "stage-backdrop",
+      "file": "components/stage-backdrop.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "z": -1000,
+          "scale": 1.7
+        }
+      ]
+    },
+    {
+      "id": "brand-mark",
+      "file": "components/brand-mark.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "x": 800,
+          "y": -440
+        }
+      ]
+    },
+    {
+      "id": "hero-title",
+      "file": "components/hero-title.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "scale": 1,
+          "opacity": 1
+        },
+        {
+          "at": 350
+        },
+        {
+          "at": 1100,
+          "x": -560,
+          "y": -400,
+          "z": -80,
+          "scale": 0.45,
+          "opacity": 0.9
+        },
+        {
+          "at": 4100
+        },
+        {
+          "at": 4600,
+          "y": -700,
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "revenue-chart",
+      "file": "components/revenue-chart.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "x": 1300,
+          "y": 70,
+          "rotateY": -40,
+          "opacity": 0
+        },
+        {
+          "at": 600
+        },
+        {
+          "at": 1200,
+          "x": 0,
+          "rotateY": 0,
+          "opacity": 1
+        },
+        {
+          "at": 2000
+        },
+        {
+          "at": 2500,
+          "scale": 1.12,
+          "rotateX": 10
+        },
+        {
+          "at": 3000,
+          "x": -1400,
+          "scale": 1,
+          "rotateX": 0,
+          "rotateY": 35,
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "pie-q4",
+      "file": "components/pie-q4.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "x": 300,
+          "y": -1100,
+          "rotateZ": 120,
+          "opacity": 0
+        },
+        {
+          "at": 2500
+        },
+        {
+          "at": 2900,
+          "x": 0,
+          "y": -60,
+          "rotateZ": 0,
+          "opacity": 1
+        },
+        {
+          "at": 3900
+        },
+        {
+          "at": 4350,
+          "x": 300,
+          "y": -1100,
+          "rotateZ": 90,
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "pie-q1",
+      "file": "components/pie-q1.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "x": 1500,
+          "y": -200,
+          "rotateZ": -150,
+          "opacity": 0
+        },
+        {
+          "at": 2550
+        },
+        {
+          "at": 2950,
+          "x": 0,
+          "y": -60,
+          "rotateZ": 0,
+          "opacity": 1
+        },
+        {
+          "at": 3950
+        },
+        {
+          "at": 4400,
+          "x": 1500,
+          "y": -200,
+          "rotateZ": -90,
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "pie-q2",
+      "file": "components/pie-q2.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "x": -200,
+          "y": 1200,
+          "rotateZ": 180,
+          "opacity": 0
+        },
+        {
+          "at": 2600
+        },
+        {
+          "at": 3000,
+          "x": 0,
+          "y": -60,
+          "rotateZ": 0,
+          "opacity": 1
+        },
+        {
+          "at": 3950
+        },
+        {
+          "at": 4400,
+          "x": -200,
+          "y": 1200,
+          "rotateZ": 90,
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "pie-q3",
+      "file": "components/pie-q3.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "x": -1600,
+          "y": 100,
+          "rotateZ": -120,
+          "opacity": 0
+        },
+        {
+          "at": 2450
+        },
+        {
+          "at": 2850,
+          "x": 0,
+          "y": -60,
+          "rotateZ": 0,
+          "opacity": 1
+        },
+        {
+          "at": 3900
+        },
+        {
+          "at": 4350,
+          "x": -1600,
+          "y": 100,
+          "rotateZ": -90,
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "pie-caption",
+      "file": "components/pie-caption.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "y": 420,
+          "scale": 0.9,
+          "opacity": 0
+        },
+        {
+          "at": 2750
+        },
+        {
+          "at": 3000,
+          "y": 340,
+          "scale": 1,
+          "opacity": 1
+        },
+        {
+          "at": 3900
+        },
+        {
+          "at": 4250,
+          "y": 460,
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "team-card",
+      "file": "components/team-card.tsx",
+      "keyframes": [
+        {
+          "at": 0,
+          "y": 700,
+          "z": -400,
+          "rotateX": 45,
+          "opacity": 0
+        },
+        {
+          "at": 3900
+        },
+        {
+          "at": 4600,
+          "y": 0,
+          "z": 0,
+          "rotateX": 0,
+          "opacity": 1
+        },
+        {
+          "at": 5300
+        },
+        {
+          "at": 5900,
+          "scale": 1.06,
+          "rotateZ": -2
+        }
+      ]
+    }
+  ]
+}
