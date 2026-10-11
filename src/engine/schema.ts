@@ -1,17 +1,8 @@
 import { z } from 'zod'
+import { KEYFRAME_PROPS } from './keyframe-props'
 
-export const KEYFRAME_PROPS = [
-  'x',
-  'y',
-  'z',
-  'scale',
-  'rotateX',
-  'rotateY',
-  'rotateZ',
-  'opacity',
-] as const
-
-export type KeyframeProp = (typeof KEYFRAME_PROPS)[number]
+export { KEYFRAME_PROPS }
+export type { KeyframeProp } from './keyframe-props'
 
 const slug = z
   .string()

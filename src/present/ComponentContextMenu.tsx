@@ -23,12 +23,13 @@ import { activePhaseIndex, stopOffsets } from "~/engine/timeline";
 import type { PhaseRange } from "~/engine/timeline";
 import type { Flash } from "./useNotice";
 import { writeStops } from "./writeStops";
+import { SLOT_ATTRIBUTE } from "./stage";
 import { ComponentCodeDialog } from "./ComponentCodeDialog";
 import { ComponentInstructionDialog } from "./ComponentInstructionDialog";
 import type { ComponentTarget } from "./ComponentInstructionDialog";
 import { DeleteComponentDialog } from "./DeleteComponentDialog";
 
-export const SLOT_ATTRIBUTE = "data-component-slot";
+export { SLOT_ATTRIBUTE };
 
 /** How close (in scroll px) the current position must be to a stop to count as "on" it. */
 const STOP_TOLERANCE = 24;

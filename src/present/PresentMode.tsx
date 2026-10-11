@@ -1,5 +1,5 @@
 import { MapPinOff, PanelLeft, PanelTop } from "lucide-react";
-import { Suspense, memo, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   ContextMenu,
@@ -11,10 +11,9 @@ import {
 } from "~/components/ui/context-menu";
 import { componentLoader, variablesOf } from "~/engine/presentations";
 import type { SlideComponent } from "~/engine/presentations";
-import type { Presentation, Variables } from "~/engine/schema";
+import type { Presentation } from "~/engine/schema";
 import {
   ScrollStoreProvider,
-  useComponentStyle,
   useScrollStore,
   useScrollStoreApi,
 } from "~/engine/scroll-store";
@@ -27,15 +26,22 @@ import {
   stopOffsets,
   trackLength,
 } from "~/engine/timeline";
-import type { PhaseRange, ResolvedKeyframe } from "~/engine/timeline";
-import { ComponentContextMenu, SLOT_ATTRIBUTE } from "./ComponentContextMenu";
+import type { PhaseRange } from "~/engine/timeline";
+import { ComponentContextMenu } from "./ComponentContextMenu";
+import {
+  Slot,
+  Stage,
+  useFullscreen,
+  useScrollDriver,
+  useStopKeys,
+} from "./stage";
 import {
   AutoplayPausedNotice,
   FullscreenAutoplayButton,
   LoopFade,
 } from "./AutoplayControls";
 import { PresentControls } from "./PresentControls";
-import { easeInOutCubic, useAutoplay } from "./useAutoplay";
+import { useAutoplay } from "./useAutoplay";
 import { useNotice } from "./useNotice";
 import { writeStops } from "./writeStops";
 
@@ -72,9 +78,6 @@ export function useComponentModules(
 
   return modules;
 }
-
-const NEXT_KEYS = new Set(["ArrowDown", "ArrowRight", "PageDown", " "]);
-const PREV_KEYS = new Set(["ArrowUp", "ArrowLeft", "PageUp"]);
 
 type PresentModeProps = {
   id: string;
@@ -204,181 +207,6 @@ function PresentStage({ id, config, onConfigSaved }: PresentModeProps) {
     </>
   );
 }
-
-function useFullscreen() {
-  const [fullscreen, setFullscreen] = useState(
-    () =>
-      typeof document !== "undefined" && document.fullscreenElement !== null,
-  );
-
-  useEffect(() => {
-    const sync = () => setFullscreen(document.fullscreenElement !== null);
-    document.addEventListener("fullscreenchange", sync);
-    return () => document.removeEventListener("fullscreenchange", sync);
-  }, []);
-
-  return fullscreen;
-}
-
-function useScrollDriver() {
-  const setOffset = useScrollStore((s) => s.setOffset);
-
-  useEffect(() => {
-    let frame = 0;
-    const sync = () => {
-      frame = 0;
-      setOffset(window.scrollY);
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(sync);
-    };
-    sync();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(frame);
-    };
-  }, [setOffset]);
-}
-
-/**
- * Arrow/page keys glide to the next or previous stop over `seconds`, eased. Pressing again
- * mid-glide aims past the current target, and any wheel or touch scroll cancels the glide.
- */
-function useStopKeys(stops: number[], seconds: number) {
-  useEffect(() => {
-    let glide: { frame: number; to: number } | null = null;
-    const cancel = () => {
-      if (glide) cancelAnimationFrame(glide.frame);
-      glide = null;
-    };
-
-    const glideTo = (to: number) => {
-      cancel();
-      const duration = seconds * 1000;
-      if (duration <= 0) {
-        window.scrollTo({ top: to });
-        return;
-      }
-      const from = window.scrollY;
-      const start = performance.now();
-      const tick = (now: number) => {
-        const t = Math.min(1, (now - start) / duration);
-        window.scrollTo({ top: from + (to - from) * easeInOutCubic(t) });
-        if (t < 1 && glide) glide.frame = requestAnimationFrame(tick);
-        else glide = null;
-      };
-      glide = { frame: requestAnimationFrame(tick), to };
-    };
-
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          target.closest('input, textarea, select, [role="dialog"]'))
-      ) {
-        return;
-      }
-
-      const forward =
-        NEXT_KEYS.has(event.key) && !(event.key === " " && event.shiftKey);
-      const backward =
-        PREV_KEYS.has(event.key) || (event.key === " " && event.shiftKey);
-      if (!forward && !backward) return;
-      event.preventDefault();
-
-      const offset = glide?.to ?? window.scrollY;
-      const next = forward
-        ? stops.find((at) => at > offset + 1)
-        : stops.findLast((at) => at < offset - 1);
-      if (next !== undefined) glideTo(next);
-    };
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("wheel", cancel, { passive: true });
-    window.addEventListener("touchstart", cancel, { passive: true });
-    return () => {
-      cancel();
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("wheel", cancel);
-      window.removeEventListener("touchstart", cancel);
-    };
-  }, [stops, seconds]);
-}
-
-function Stage({
-  width,
-  height,
-  backgroundColor,
-  children,
-}: {
-  width: number;
-  height: number;
-  backgroundColor: string;
-  children: React.ReactNode;
-}) {
-  const [scale, setScale] = useState<number | null>(null);
-
-  useEffect(() => {
-    const fit = () =>
-      setScale(
-        Math.min(window.innerWidth / width, window.innerHeight / height),
-      );
-    fit();
-    window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
-  }, [width, height]);
-
-  return (
-    <div
-      className="fixed inset-0 grid place-items-center overflow-hidden"
-      style={{ backgroundColor }}
-    >
-      {scale !== null && (
-        <div style={{ width: width * scale, height: height * scale }}>
-          <div
-            className="relative origin-top-left overflow-hidden [perspective:1600px]"
-            style={{
-              width,
-              height,
-              transform: `scale(${scale})`,
-              backgroundColor,
-            }}
-          >
-            <Suspense fallback={null}>{children}</Suspense>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const Slot = memo(function Slot({
-  id,
-  keyframes,
-  Component,
-  vars,
-  interactive,
-}: {
-  id: string;
-  keyframes: ResolvedKeyframe[];
-  Component: SlideComponent;
-  vars: Variables;
-  /** Lets the component's own box receive pointer events, for the right-click menu. */
-  interactive: boolean;
-}) {
-  const style = useComponentStyle(keyframes);
-  return (
-    <div
-      {...{ [SLOT_ATTRIBUTE]: id }}
-      className={`pointer-events-none absolute inset-0 flex items-center justify-center [transform-style:preserve-3d] data-[targeted]:*:outline-4 data-[targeted]:*:outline-offset-8 data-[targeted]:*:outline-sky-400 data-[targeted]:*:outline-dashed ${
-        interactive ? "*:pointer-events-auto" : ""
-      }`}
-    >
-      <Component style={style} vars={vars} />
-    </div>
-  );
-});
 
 /** Clicks this close (in screen px) to a stop land exactly on it. */
 const STOP_SNAP_PX = 8;

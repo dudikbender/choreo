@@ -1,5 +1,12 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { EllipsisVertical, FileText, ImageIcon, Trash2 } from "lucide-react";
+import {
+  EllipsisVertical,
+  FileDown,
+  FileText,
+  ImageIcon,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -20,6 +27,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { removePresentation } from "~/server/functions";
 import { AssetsDialog } from "./AssetsDialog";
+import { download } from "./download";
 
 export function PresentationActions({
   id,
@@ -33,6 +41,22 @@ export function PresentationActions({
   const [managingAssets, setManagingAssets] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const save = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await download(`/api/save/${id}`, `${id}.html`);
+      setMenuOpen(false);
+    } catch (e) {
+      setSaveError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const remove = async () => {
     setDeleting(true);
@@ -50,7 +74,14 @@ export function PresentationActions({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu
+        open={menuOpen}
+        onOpenChange={(open) => {
+          if (saving) return;
+          setMenuOpen(open);
+          if (!open) setSaveError(null);
+        }}
+      >
         <DropdownMenuTrigger
           aria-label={`More actions for ${title}`}
           className="rounded-lg p-2 text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground hover:cursor-pointer"
@@ -68,6 +99,25 @@ export function PresentationActions({
               Export...
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={saving}
+            title="Download a single HTML file that plays on its own, scroll and all"
+            onSelect={(event) => {
+              event.preventDefault();
+              void save();
+            }}
+          >
+            {saving ? <Loader2 className="animate-spin" /> : <FileDown />}
+            {saving ? "Saving…" : "Save…"}
+          </DropdownMenuItem>
+          {saveError && (
+            <p
+              role="alert"
+              className="max-w-56 px-2 py-1.5 text-xs text-red-600 dark:text-red-400"
+            >
+              {saveError}
+            </p>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
@@ -96,7 +146,9 @@ export function PresentationActions({
               its story, components and assets. It can’t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction

@@ -1,4 +1,4 @@
-import { KEYFRAME_PROPS } from './schema'
+import { KEYFRAME_PROPS } from './keyframe-props'
 import type { Keyframe, KeyframeProp, Phase, Presentation } from './schema'
 
 export type Pose = Record<KeyframeProp, number>

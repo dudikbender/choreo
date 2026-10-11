@@ -31,6 +31,7 @@ choreography.
 - Add images, video, data files and links as assets.
 - Present full screen with arrow-key stops, auto-play and looping.
 - Export a PDF with one page per stop point.
+- Save a single self-contained HTML file to share. It plays on its own, with scrolling, arrow-key stops and auto-play, and needs no server.
 
 ## Getting started
 
