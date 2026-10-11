@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Code, Copy, MapPinOff, MapPinPlus, RotateCcw, Sparkles, Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -8,10 +8,11 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '~/components/ui/context-menu'
-import type { Presentation, Stop } from '~/engine/schema'
+import type { Presentation } from '~/engine/schema'
 import { activePhaseIndex, stopOffsets } from '~/engine/timeline'
 import type { PhaseRange } from '~/engine/timeline'
-import { saveStops } from '~/server/functions'
+import type { Flash } from './useNotice'
+import { writeStops } from './writeStops'
 import { ComponentCodeDialog } from './ComponentCodeDialog'
 import { ComponentInstructionDialog } from './ComponentInstructionDialog'
 import type { ComponentTarget } from './ComponentInstructionDialog'
@@ -60,6 +61,7 @@ export function ComponentContextMenu({
   ranges,
   disabled,
   onConfigSaved,
+  flash,
   children,
 }: {
   presentationId: string
@@ -68,6 +70,7 @@ export function ComponentContextMenu({
   disabled: boolean
   /** Applies a successful save to the on-screen config, mirroring what the server wrote. */
   onConfigSaved: (update: (config: Presentation) => Presentation) => void
+  flash: Flash
   children: React.ReactNode
 }) {
   const [stack, setStack] = useState<{ ids: string[]; underPointer: number; index: number }>({
@@ -79,8 +82,6 @@ export function ComponentContextMenu({
   const [instructing, setInstructing] = useState<ComponentTarget | null>(null)
   const [deleting, setDeleting] = useState<ComponentTarget | null>(null)
   const [editing, setEditing] = useState<ComponentTarget | null>(null)
-  const [notice, setNotice] = useState<{ message: string; error?: boolean } | null>(null)
-  const noticeTimer = useRef<number | undefined>(undefined)
 
   const stops = stopOffsets(config)
   const custom = config.stops !== undefined
@@ -109,29 +110,8 @@ export function ComponentContextMenu({
     return () => slot?.removeAttribute('data-targeted')
   }, [highlighted])
 
-  useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
-
-  const flash = (message: string, error = false) => {
-    window.clearTimeout(noticeTimer.current)
-    setNotice({ message, error })
-    noticeTimer.current = window.setTimeout(() => setNotice(null), error ? 5000 : 2200)
-  }
-
-  const writeStops = async (next: number[] | null, message: string) => {
-    try {
-      const report = await saveStops({ data: { id: presentationId, stops: next } })
-      if (report.errors.length > 0) {
-        flash(report.errors.join(' · '), true)
-        return
-      }
-      const sorted = next && [...new Set(next.map(Math.round))].sort((a, b) => a - b)
-      const stops: Stop[] | undefined = sorted?.length ? sorted.map((at) => ({ at })) : undefined
-      onConfigSaved((current) => ({ ...current, stops }))
-      flash(message)
-    } catch (error) {
-      flash((error as Error).message, true)
-    }
-  }
+  const setStops = (next: number[] | null, message: string) =>
+    writeStops({ presentationId, next, message, onConfigSaved, flash })
 
   const onContextMenu = (event: React.MouseEvent) => {
     const offset = Math.min(Math.round(window.scrollY), end)
@@ -249,7 +229,7 @@ export function ComponentContextMenu({
           {stopHere === undefined ? (
             <ContextMenuItem
               onSelect={() =>
-                void writeStops([...stops, menuOffset], `Stop added at ${menuOffset.toLocaleString()}`)
+                void setStops([...stops, menuOffset], `Stop added at ${menuOffset.toLocaleString()}`)
               }
             >
               <MapPinPlus />
@@ -259,7 +239,7 @@ export function ComponentContextMenu({
             <ContextMenuItem
               disabled={stops.length === 1}
               onSelect={() =>
-                void writeStops(
+                void setStops(
                   stops.filter((at) => at !== stopHere),
                   `Stop at ${stopHere.toLocaleString()} removed`,
                 )
@@ -270,24 +250,13 @@ export function ComponentContextMenu({
             </ContextMenuItem>
           )}
           {custom && (
-            <ContextMenuItem onSelect={() => void writeStops(null, 'Stops reset to phase starts')}>
+            <ContextMenuItem onSelect={() => void setStops(null, 'Stops reset to phase starts')}>
               <RotateCcw />
               Reset to phase starts
             </ContextMenuItem>
           )}
         </ContextMenuContent>
       </ContextMenu>
-
-      {notice && (
-        <div
-          role="status"
-          className={`pointer-events-none fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm shadow-2xl ring-1 backdrop-blur-md ${
-            notice.error ? 'bg-red-950/90 text-red-200 ring-red-800' : 'bg-neutral-950/85 text-neutral-100 ring-white/10'
-          }`}
-        >
-          {notice.message}
-        </div>
-      )}
 
       {instructing && (
         <ComponentInstructionDialog

@@ -1,7 +1,7 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { ArrowLeft, Download, Printer } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { loadPresentation } from '~/engine/presentations'
+import { loadPresentation, variablesOf } from '~/engine/presentations'
 import type { Presentation } from '~/engine/schema'
 import {
   activePhaseIndex,
@@ -79,6 +79,7 @@ function PrintPages({ id, config, chrome }: { id: string; config: Presentation; 
   }, [chrome, width])
 
   const background = config.meta.backgroundColor
+  const vars = variablesOf(config)
 
   return (
     <>
@@ -116,7 +117,7 @@ function PrintPages({ id, config, chrome }: { id: string; config: Presentation; 
                           key={component.id}
                           className="pointer-events-none absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]"
                         >
-                          <Component style={poseToStyle(poseAt(component.resolved, at))} />
+                          <Component style={poseToStyle(poseAt(component.resolved, at))} vars={vars} />
                         </div>
                       )
                     })}

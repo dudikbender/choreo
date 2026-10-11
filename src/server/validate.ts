@@ -2,6 +2,7 @@ import { parseSync } from 'oxc-parser'
 import { presentationSchema } from '~/engine/schema'
 import { parseStory, storyPhaseMismatches } from '~/engine/story'
 import { findUnsettledAtPhaseStarts } from '~/engine/timeline'
+import { variableReferences } from '~/engine/variables'
 
 export const CONFIG_PATH = 'presentation.json'
 export const STORY_PATH = 'story.md'
@@ -81,6 +82,16 @@ export function validateFolder(files: Record<string, string>): FolderReport {
   for (const component of parsed.data.components) {
     if (files[component.file] === undefined) {
       errors.push(`${CONFIG_PATH}: component "${component.id}" points at missing file ${component.file}`)
+    }
+  }
+  const defined = parsed.data.variables ?? {}
+  for (const component of parsed.data.components) {
+    const source = files[component.file]
+    if (source === undefined) continue
+    for (const name of variableReferences(source)) {
+      if (!Object.hasOwn(defined, name)) {
+        warnings.push(`${component.file} uses vars.${name}, but ${CONFIG_PATH} has no variable "${name}"`)
+      }
     }
   }
   const referenced = new Set(parsed.data.components.map((c) => c.file))

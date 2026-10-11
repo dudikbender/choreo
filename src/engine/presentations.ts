@@ -1,8 +1,15 @@
 import type { ComponentType, CSSProperties } from 'react'
 import { presentationSchema } from './schema'
-import type { Presentation } from './schema'
+import type { Presentation, Variables } from './schema'
 
-export type SlideComponent = ComponentType<{ style: CSSProperties }>
+export type SlideComponent = ComponentType<{ style: CSSProperties; vars: Variables }>
+
+const NO_VARIABLES: Variables = Object.freeze({})
+
+/** Stable when the presentation has no variables, so memoized slots don't re-render. */
+export function variablesOf(config: Presentation): Variables {
+  return config.variables ?? NO_VARIABLES
+}
 
 export const __globs = {
   configs: import.meta.glob<unknown>('/presentations/*/presentation.json', {

@@ -13,6 +13,7 @@ import { HISTORY_CONTEXT_LIMIT, formatHistory } from '~/engine/history'
 import { presentationSchema } from '~/engine/schema'
 import { diffStories, parseStory, serializeStory, storySchema } from '~/engine/story'
 import { layoutPhases, poseAt, resolveKeyframes } from '~/engine/timeline'
+import { formatVariables } from '~/engine/variables'
 import { reviewLayout } from './review'
 import {
   COMPONENT_PATH,
@@ -167,7 +168,7 @@ const tools: Tool[] = [
         config: {
           type: 'object',
           description:
-            'Complete presentation.json: version 1, meta {title, aspectRatio, backgroundColor?}, phases [{id,label,duration}], stops? [{at}], components [{id,file,keyframes:[{at,...}]}]. Existing stops are kept if you omit them.',
+            'Complete presentation.json: version 1, meta {title, aspectRatio, backgroundColor?}, phases [{id,label,duration}], stops? [{at}], variables? {name: text}, components [{id,file,keyframes:[{at,...}]}]. Existing stops and variables are kept if you omit them.',
         },
       },
       required: ['config'],
@@ -208,6 +209,12 @@ const SYSTEM_PROMPT = `You author scroll-driven presentations that tell stories.
 - Only import from "react" (types and hooks) or "../assets/<file>" for files that list_files shows. No other packages; use inline SVG for icons and charts.
 - Never read scroll position, window size, or use timers to animate — motion comes only from keyframes.
 - Self-contained: never import sibling components.
+
+## Variables
+- presentation.json may hold "variables": { "<camelCaseName>": "<text>" } — values the designer reuses across components, like a client's name or a tagline. They're listed in <variables>.
+- Every component also receives a \`vars\` prop with them. To use one, take it in the signature — \`({ style, vars }: { style: CSSProperties; vars: Record<string, string> })\` — and write \`{vars.clientName}\` wherever its text belongs, including attributes like alt or title.
+- When a variable holds the text you would show, always use the variable instead of typing its value, so the designer can change it in one place.
+- Create a variable only when the designer asks for one, or when they ask for a value to be easy to swap (a client name, a date, a price). Name it in camelCase and add it to "variables" with str_replace on presentation.json. Never rename or remove a variable unless asked; components that use it would show nothing.
 
 ## Assets
 - The designer can add media to a presentation. They're listed in <assets> (and by list_files) with kind, size and the designer's description. Use them when the story or instruction calls for them, or when one clearly fits a beat; don't force every asset in.
@@ -381,11 +388,17 @@ export function runTool(ws: Workspace, name: string, input: Record<string, unkno
     }
 
     case 'write_config': {
-      const previous = safeJson(ws.get(CONFIG_PATH)) as { stops?: unknown } | undefined
+      const previous = safeJson(ws.get(CONFIG_PATH)) as Record<string, unknown> | undefined
       const config = input.config
-      const keepStops =
-        previous?.stops !== undefined && config && typeof config === 'object' && !('stops' in config)
-      const parsed = presentationSchema.safeParse(keepStops ? { ...config, stops: previous.stops } : config)
+      const kept =
+        previous && config && typeof config === 'object'
+          ? Object.fromEntries(
+              (['stops', 'variables'] as const).flatMap((key) =>
+                previous[key] !== undefined && !(key in config) ? [[key, previous[key]]] : [],
+              ),
+            )
+          : {}
+      const parsed = presentationSchema.safeParse(config && typeof config === 'object' ? { ...config, ...kept } : config)
       if (!parsed.success) {
         const errors = parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
         return { content: `Not written. Fix these and retry:\n${errors.join('\n')}`, isError: true }
@@ -446,7 +459,9 @@ export async function generate(
 
   const history = modifying ? formatHistory(await readHistory(request.id, { limit: HISTORY_CONTEXT_LIMIT })) : ''
   const assets = formatAssets(ws.assetList())
-  const context = [history, assets, opening].filter(Boolean).join('\n\n')
+  const config = presentationSchema.safeParse(safeJson(ws.get(CONFIG_PATH)))
+  const variables = formatVariables(config.success ? config.data.variables : undefined)
+  const context = [history, assets, variables, opening].filter(Boolean).join('\n\n')
 
   const client = new Anthropic()
   const messages: MessageParam[] = [{ role: 'user', content: context }]

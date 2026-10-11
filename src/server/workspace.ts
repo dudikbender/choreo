@@ -4,7 +4,9 @@ import path from 'node:path'
 import { HISTORY_KEEP, HISTORY_PATH, editDiff, historyEntrySchema, parseHistory } from '~/engine/history'
 import type { HistoryEntry, HistoryEntryInput } from '~/engine/history'
 import { presentationSchema } from '~/engine/schema'
+import type { Variables } from '~/engine/schema'
 import { parseStory, storyFromPhases } from '~/engine/story'
+import { variableReferences } from '~/engine/variables'
 import type { Story } from '~/engine/story'
 import { COMPONENT_PATH, CONFIG_PATH, ID_PATTERN, STORY_PATH, isEditablePath, validateFolder } from './validate'
 import type { FolderReport } from './validate'
@@ -105,6 +107,59 @@ export async function updateStops(id: string, offsets: number[] | null): Promise
   const after = `${JSON.stringify(next, null, 2)}\n`
   if (after === before) return { errors: [], warnings: [] }
   return applyChanges(id, [{ path: CONFIG_PATH, before, after }], { create: false })
+}
+
+/** Replaces the presentation's variables. An empty set removes the field. */
+export async function updateVariables(id: string, variables: Variables): Promise<FolderReport> {
+  const files = await readEditableFiles(id)
+  const before = files[CONFIG_PATH]
+  const raw = safeJson(before)
+  if (before === undefined || !raw || typeof raw !== 'object') {
+    return { errors: [`${CONFIG_PATH} is missing or not valid JSON`], warnings: [] }
+  }
+
+  const { variables: previous, components, ...rest } = raw as Record<string, unknown>
+  const next = { ...rest, ...(Object.keys(variables).length ? { variables } : {}), components }
+  const after = `${JSON.stringify(next, null, 2)}\n`
+  if (after === before) return { errors: [], warnings: [] }
+
+  const report = await applyChanges(id, [{ path: CONFIG_PATH, before, after }], { create: false })
+  if (report.errors.length === 0) {
+    await appendHistory(id, {
+      kind: 'variables',
+      outcome: 'manual',
+      request: describeVariableChanges((previous ?? {}) as Variables, variables),
+      files: [CONFIG_PATH],
+    })
+  }
+  return report
+}
+
+function describeVariableChanges(before: Variables, after: Variables): string {
+  const changes = [
+    ...Object.entries(after).flatMap(([name, value]) =>
+      !Object.hasOwn(before, name)
+        ? [`added ${name} = ${JSON.stringify(value)}`]
+        : before[name] !== value
+          ? [`set ${name} to ${JSON.stringify(value)}`]
+          : [],
+    ),
+    ...Object.keys(before)
+      .filter((name) => !Object.hasOwn(after, name))
+      .map((name) => `removed ${name}`),
+  ]
+  return `Changed variables: ${changes.join('; ') || 'reordered'}.`
+}
+
+/** How many components read each variable, by name. */
+export async function variableUsage(id: string): Promise<Record<string, string[]>> {
+  const files = await readEditableFiles(id)
+  const usage: Record<string, string[]> = {}
+  for (const [file, source] of Object.entries(files)) {
+    if (!COMPONENT_PATH.test(file)) continue
+    for (const name of variableReferences(source)) (usage[name] ??= []).push(file)
+  }
+  return usage
 }
 
 /**

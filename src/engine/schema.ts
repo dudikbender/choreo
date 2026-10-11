@@ -69,6 +69,17 @@ const cssColor = z
     'must be a CSS color (#hex, rgb(), hsl(), or a named color)',
   )
 
+export const VARIABLE_NAME = /^[a-z][A-Za-z0-9]*$/
+
+/** Text values shared across components, e.g. a client's name. Components read them from `vars`. */
+export const variablesSchema = z.record(z.string(), z.string()).superRefine((variables, ctx) => {
+  for (const name of Object.keys(variables)) {
+    if (!VARIABLE_NAME.test(name)) {
+      ctx.addIssue({ code: 'custom', path: [name], message: `"${name}" must be camelCase, like clientName` })
+    }
+  }
+})
+
 export const presentationSchema = z
   .strictObject({
     version: z.literal(CURRENT_VERSION),
@@ -83,6 +94,7 @@ export const presentationSchema = z
     phases: z.array(phaseSchema).min(1),
     /** Omitted = every phase start is a stop. */
     stops: z.array(stopSchema).min(1).optional(),
+    variables: variablesSchema.optional(),
     components: z.array(componentSchema),
   })
   .superRefine((config, ctx) => {
@@ -117,5 +129,6 @@ export const presentationSchema = z
 export type Keyframe = z.infer<typeof keyframeSchema>
 export type Phase = z.infer<typeof phaseSchema>
 export type Stop = z.infer<typeof stopSchema>
+export type Variables = z.infer<typeof variablesSchema>
 export type PresentationComponent = z.infer<typeof componentSchema>
 export type Presentation = z.infer<typeof presentationSchema>

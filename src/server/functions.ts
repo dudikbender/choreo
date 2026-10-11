@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { HISTORY_KEEP, historyEntrySchema } from '~/engine/history'
+import { variablesSchema } from '~/engine/schema'
 
 export const getPresentations = createServerFn({ method: 'GET' }).handler(async () => {
   const { listPresentations } = await import('./workspace')
@@ -31,6 +32,20 @@ export const saveStops = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { updateStops } = await import('./workspace')
     return updateStops(data.id, data.stops)
+  })
+
+export const getVariableUsage = createServerFn({ method: 'GET' })
+  .validator(z.object({ id: z.string() }))
+  .handler(async ({ data }) => {
+    const { variableUsage } = await import('./workspace')
+    return variableUsage(data.id)
+  })
+
+export const saveVariables = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string(), variables: variablesSchema }))
+  .handler(async ({ data }) => {
+    const { updateVariables } = await import('./workspace')
+    return updateVariables(data.id, data.variables)
   })
 
 export const removeComponent = createServerFn({ method: 'POST' })

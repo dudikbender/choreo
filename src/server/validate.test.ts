@@ -91,6 +91,25 @@ describe('validateFolder', () => {
     expect(report.warnings).toHaveLength(1)
   })
 
+  it('warns when a component uses a variable that is not defined', () => {
+    const usesVars = `import type { CSSProperties } from 'react'
+export default function Title({ style, vars }: { style: CSSProperties; vars: Record<string, string> }) {
+  return <h1 style={style} title={vars['tagline']}>{vars.clientName}</h1>
+}
+`
+    const files = (variables?: Record<string, string>) => ({
+      'presentation.json': JSON.stringify({
+        ...JSON.parse(config([{ id: 'title', file: 'components/title.tsx', keyframes: [{ at: 0 }] }])),
+        variables,
+      }),
+      'components/title.tsx': usesVars,
+    })
+    expect(validateFolder(files({ clientName: 'Acme' })).warnings).toEqual([
+      'components/title.tsx uses vars.tagline, but presentation.json has no variable "tagline"',
+    ])
+    expect(validateFolder(files({ clientName: 'Acme', tagline: 'Hi' }))).toEqual({ errors: [], warnings: [] })
+  })
+
   it('reports invalid JSON', () => {
     expect(validateFolder({ 'presentation.json': '{' }).errors[0]).toMatch(/invalid JSON/)
   })

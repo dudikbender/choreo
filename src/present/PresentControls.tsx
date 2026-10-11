@@ -2,17 +2,23 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useId, useRef, useState } from 'react'
 import { AssetsDialog } from '~/home/AssetsDialog'
 import { DesignPanel } from '~/home/DesignPanel'
+import { VariablesDialog } from '~/home/VariablesDialog'
+import type { Variables } from '~/engine/schema'
 import { AutoplayControls } from './AutoplayControls'
 import type { Autoplay } from './useAutoplay'
 
 export function PresentControls({
   id,
   title,
+  variables,
+  onVariablesSaved,
   autoplay,
   hidden,
 }: {
   id: string
   title: string
+  variables: Variables
+  onVariablesSaved: (variables: Variables) => void
   autoplay: Autoplay
   /** Hide the dock (and the modify dialog) while the page is in fullscreen present. */
   hidden: boolean
@@ -20,6 +26,7 @@ export function PresentControls({
   const navigate = useNavigate()
   const [modifying, setModifying] = useState(false)
   const [managingAssets, setManagingAssets] = useState(false)
+  const [editingVariables, setEditingVariables] = useState(false)
 
   if (hidden) return null
 
@@ -30,6 +37,7 @@ export function PresentControls({
           <DockButton onClick={() => navigate({ to: '/' })}>Main</DockButton>
           <DockButton onClick={() => setModifying(true)}>Modify</DockButton>
           <DockButton onClick={() => setManagingAssets(true)}>Assets</DockButton>
+          <DockButton onClick={() => setEditingVariables(true)}>Variables</DockButton>
           <AutoplayControls autoplay={autoplay} />
           <DockButton primary onClick={() => void enterFullscreen()}>
             Present
@@ -46,6 +54,15 @@ export function PresentControls({
         />
       )}
       {managingAssets && <AssetsDialog id={id} title={title} onClose={() => setManagingAssets(false)} />}
+      {editingVariables && (
+        <VariablesDialog
+          id={id}
+          title={title}
+          variables={variables}
+          onSaved={onVariablesSaved}
+          onClose={() => setEditingVariables(false)}
+        />
+      )}
     </>
   )
 }

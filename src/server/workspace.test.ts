@@ -199,6 +199,32 @@ describe('tool loop + apply', () => {
     expect((await read()).stops).toBeUndefined()
   })
 
+  it('saves variables before components, logs them, and removes an empty set', async () => {
+    const { updateVariables, readEditableFiles, readHistory } = await import('./workspace')
+    const read = async () => JSON.parse((await readEditableFiles('demo'))['presentation.json'])
+
+    expect((await updateVariables('demo', { clientName: 'Acme' })).errors).toEqual([])
+    const saved = await read()
+    expect(saved.variables).toEqual({ clientName: 'Acme' })
+    expect(Object.keys(saved).slice(-2)).toEqual(['variables', 'components'])
+
+    await updateVariables('demo', { clientName: 'Globex', tagline: 'Hi' })
+    const [last] = await readHistory('demo', { limit: 1 })
+    expect(last).toMatchObject({ kind: 'variables', outcome: 'manual' })
+    expect(last.request).toBe('Changed variables: set clientName to "Globex"; added tagline = "Hi".')
+
+    expect((await updateVariables('demo', { 'Bad Name': 'x' })).errors[0]).toMatch(/camelCase/)
+    expect((await updateVariables('demo', {})).errors).toEqual([])
+    expect((await read()).variables).toBeUndefined()
+  })
+
+  it('write_config keeps existing variables when the model omits them', () => {
+    const withVars = { ...config, variables: { clientName: 'Acme' } }
+    const ws = new Workspace({ 'presentation.json': `${JSON.stringify(withVars, null, 2)}\n` }, [])
+    runTool(ws, 'write_config', { config })
+    expect(JSON.parse(ws.get('presentation.json')!).variables).toEqual({ clientName: 'Acme' })
+  })
+
   it('write_config keeps existing stops when the model omits them', () => {
     const withStops = { ...config, stops: [{ at: 250 }] }
     const ws = new Workspace({ 'presentation.json': `${JSON.stringify(withStops, null, 2)}\n` }, [])

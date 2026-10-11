@@ -16,7 +16,7 @@ const clipped = (max: number) => z.string().transform((s) => (s.length > max ? `
 export const historyEntrySchema = z.object({
   at: z.string(),
   /** What produced the change: a story revision, a right-click instruction, a new presentation, or the designer by hand. */
-  kind: z.enum(['create', 'story', 'component', 'delete-component', 'manual-edit']),
+  kind: z.enum(['create', 'story', 'component', 'delete-component', 'manual-edit', 'variables']),
   outcome: z.enum(['applied', 'discarded', 'manual']),
   /** What the designer asked for, in their words (or a description of a manual action). */
   request: clipped(MAX_TEXT),
