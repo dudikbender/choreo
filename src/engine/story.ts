@@ -208,6 +208,39 @@ export function diffStories(before: Story, after: Story): string[] {
   return changes
 }
 
+export type StoryTextEdit = { what: string; before: string; after: string }
+
+/**
+ * The old and new wording of every rewritten theme, beat description and transition,
+ * so a reader can see how much of each one changed. Empty strings mean "none".
+ */
+export function storyTextEdits(before: Story, after: Story): StoryTextEdit[] {
+  const edits: StoryTextEdit[] = []
+  const push = (what: string, was: string, now: string) => {
+    if (was.trim() !== now.trim()) edits.push({ what, before: was.trim(), after: now.trim() })
+  }
+  push('the theme', before.theme, after.theme)
+
+  const prev = assignBeatIds(before.beats)
+  const next = assignBeatIds(after.beats)
+  const nextById = new Map(next.map((beat) => [beat.id, beat]))
+  const name = (beat: StoryBeat) => `"${oneLine(beat.title) || beat.id}"`
+
+  for (const beat of prev) {
+    const now = nextById.get(beat.id)
+    push(`beat ${name(now ?? beat)} (phase ${beat.id})${now ? '' : ', removed'}`, beat.description, now?.description ?? '')
+  }
+
+  const transitionsBefore = new Map(
+    prev.slice(0, -1).map((beat, i) => [`${beat.id}>${prev[i + 1].id}`, beat.transition]),
+  )
+  next.slice(0, -1).forEach((beat, i) => {
+    const was = transitionsBefore.get(`${beat.id}>${next[i + 1].id}`)
+    if (was !== undefined) push(`transition ${name(beat)} → ${name(next[i + 1])}`, was, beat.transition)
+  })
+  return edits
+}
+
 /** Beats and phases must line up one-to-one, in order. */
 export function storyPhaseMismatches(story: Story, phases: Phase[]): string[] {
   const problems: string[] = []

@@ -11,7 +11,8 @@ import { describeAsset, extensionOf, formatAssets, formatBytes, isRemote } from 
 import type { AssetEntry } from '~/engine/assets'
 import { HISTORY_CONTEXT_LIMIT, formatHistory } from '~/engine/history'
 import { presentationSchema } from '~/engine/schema'
-import { diffStories, parseStory, serializeStory, storySchema } from '~/engine/story'
+import { diffStories, parseStory, serializeStory, storySchema, storyTextEdits } from '~/engine/story'
+import type { StoryTextEdit } from '~/engine/story'
 import { layoutPhases, poseAt, resolveKeyframes } from '~/engine/timeline'
 import { formatVariables } from '~/engine/variables'
 import { reviewLayout } from './review'
@@ -28,7 +29,7 @@ import { listAssetEntries, readAssetFile } from './assets'
 import { presentationExists, readEditableFiles, readHistory } from './workspace'
 import type { FileChange } from './workspace'
 
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5-5'
+export const MODEL = process.env.ANTHROPIC_MODEL || 'claude-opus-5-5'
 const MAX_TURNS = 40
 const MAX_FIX_ROUNDS = 3
 /** Opus 5.5 allows 128k output; thinking tokens count against this. */
@@ -192,6 +193,12 @@ const SYSTEM_PROMPT = `You author scroll-driven presentations that tell stories.
 - The files are the truth; history can be out of date. Never re-apply an old change from memory: read the current file.
 - Hand edits show the designer's taste: keep them, and follow their lead elsewhere. Don't re-propose a discarded idea unless asked.
 
+## Scope of a modification
+- The designer's story revisions (listed, with the exact before/after wording in <edits>) and their direction are the whole request. Change only what they touch: the components, keyframes and phases of the beats they name, and for a changed transition the choreography between those two beats.
+- Size the change to the edit: a reworded sentence calls for a matching tweak, not a redesign of the beat.
+- Leave every other beat, component and transition exactly as it is, even ones you think could be better. If something outside the scope looks broken (an unsettled component, a beat/phase mismatch), mention it in your summary instead of fixing it.
+- The scope widens only when the change genuinely reaches further: a rewritten theme, added/removed/reordered beats (their neighbors' transitions and the phase offsets after them), a moved phase that shifts later keyframes and stops, or direction that asks for it ("make it all darker").
+
 ## How the engine renders
 - The stage is 1920px wide (height from meta.aspectRatio; 1080px for 16:9) with CSS perspective of 1600px.
 - Stage + letterbox background comes from meta.backgroundColor (CSS color string; default "#171717"). Change the background by editing that field — do NOT invent a full-screen backdrop component.
@@ -230,7 +237,7 @@ const SYSTEM_PROMPT = `You author scroll-driven presentations that tell stories.
 - New presentation: write_component for each new file, then write_config with "version": 1 and one phase per story beat (id = the beat's phase id). Ids are kebab-case; each component's file is "components/<id>.tsx".
 - Modifying: review_story, read only the files you will change, then str_replace. Do not call write_component or write_config on a file that already exists unless you are adding a new component or restructuring the whole config.
 - Never rewrite an unchanged file. Never dump a full file as a tool argument when a few-line str_replace would do.
-- Create one coherent visual design that follows the theme, and make every beat and transition read as part of a single story.
+- Create one coherent visual design that follows the theme, and make every beat and transition read as part of a single story. When modifying, fit your change into the existing design rather than reworking it.
 - When finished, reply with a 2–4 sentence plain-text summary (no Markdown) for the user of what you made or changed. Don't ask questions; make reasonable choices.`
 
 export class Workspace {
@@ -630,7 +637,17 @@ export function stageStory(ws: Workspace, request: StoryRequest): string | null 
     : saved === null
       ? `This presentation had no ${STORY_PATH}; the designer laid out its story for the first time.`
       : `The designer revised the story layout:\n${changes.map((c) => `- ${c}`).join('\n')}`
-  return `Modify the presentation in folder "${request.id}". ${summary}\n\nThe full story (already saved as ${STORY_PATH}):\n\n${story}${notes}`
+  const edits = saved ? formatTextEdits(storyTextEdits(saved, request.story)) : ''
+  return `Modify the presentation in folder "${request.id}". ${summary}${edits}\n\nThe full story (already saved as ${STORY_PATH}):\n\n${story}${notes}`
+}
+
+function formatTextEdits(edits: StoryTextEdit[]): string {
+  if (edits.length === 0) return ''
+  const blocks = edits.map(
+    (edit) =>
+      `<edit>\nIn ${edit.what}:\n<before>\n${edit.before || '(none)'}\n</before>\n<after>\n${edit.after || '(none)'}\n</after>\n</edit>`,
+  )
+  return `\n\nThe exact wording that changed:\n<edits>\n${blocks.join('\n')}\n</edits>`
 }
 
 /**

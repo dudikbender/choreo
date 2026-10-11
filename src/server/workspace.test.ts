@@ -150,6 +150,25 @@ describe('tool loop + apply', () => {
     expect(ws.changes()).toEqual([])
   })
 
+  it('quotes the old and new wording of a revised beat', () => {
+    const saved = '# Demo\n\n## Intro\n<!-- phase: intro -->\n\nSay hi.\n\n## Outro\n<!-- phase: outro -->\n\nSay bye.\n'
+    const ws = new Workspace({ 'story.md': saved }, [])
+    const story = {
+      title: 'Demo',
+      theme: '',
+      beats: [
+        { id: 'intro', title: 'Intro', description: 'Say hello, warmly.', transition: '' },
+        { id: 'outro', title: 'Outro', description: 'Say bye.', transition: '' },
+      ],
+    }
+    const opening = stageStory(ws, { mode: 'modify', id: 'demo', story, notes: '' })
+    expect(opening).toContain('- Rewrote beat "Intro"')
+    expect(opening).toContain(
+      '<edit>\nIn beat "Intro" (phase intro):\n<before>\nSay hi.\n</before>\n<after>\nSay hello, warmly.\n</after>\n</edit>',
+    )
+    expect(opening).not.toContain('Outro" (phase outro)')
+  })
+
   it('builds a component-scoped instruction with its source and beats', () => {
     const ws = new Workspace(
       {

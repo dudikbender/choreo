@@ -15,6 +15,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiGenerateRouteImport } from './routes/api/generate'
 import { Route as ApiAssetUploadIdRouteImport } from './routes/api/asset-upload.$id'
 import { Route as ApiExportIdRouteImport } from './routes/api/export.$id'
+import { Route as StudioIdEditRouteImport } from './routes/studio.$id.edit'
 import { Route as StudioIdPresentRouteImport } from './routes/studio.$id.present'
 import { Route as StudioIdPrintRouteImport } from './routes/studio.$id.print'
 import { Route as ApiAssetsIdNameRouteImport } from './routes/api/assets.$id.$name'
@@ -49,6 +50,11 @@ const ApiExportIdRoute = ApiExportIdRouteImport.update({
   path: '/api/export/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudioIdEditRoute = StudioIdEditRouteImport.update({
+  id: '/studio/$id/edit',
+  path: '/studio/$id/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudioIdPresentRoute = StudioIdPresentRouteImport.update({
   id: '/studio/$id/present',
   path: '/studio/$id/present',
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/api/generate': typeof ApiGenerateRoute
   '/api/asset-upload/$id': typeof ApiAssetUploadIdRoute
   '/api/export/$id': typeof ApiExportIdRoute
+  '/studio/$id/edit': typeof StudioIdEditRoute
   '/studio/$id/present': typeof StudioIdPresentRoute
   '/studio/$id/print': typeof StudioIdPrintRoute
   '/api/assets/$id/$name': typeof ApiAssetsIdNameRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/api/generate': typeof ApiGenerateRoute
   '/api/asset-upload/$id': typeof ApiAssetUploadIdRoute
   '/api/export/$id': typeof ApiExportIdRoute
+  '/studio/$id/edit': typeof StudioIdEditRoute
   '/studio/$id/present': typeof StudioIdPresentRoute
   '/studio/$id/print': typeof StudioIdPrintRoute
   '/api/assets/$id/$name': typeof ApiAssetsIdNameRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/api/generate': typeof ApiGenerateRoute
   '/api/asset-upload/$id': typeof ApiAssetUploadIdRoute
   '/api/export/$id': typeof ApiExportIdRoute
+  '/studio/$id/edit': typeof StudioIdEditRoute
   '/studio/$id/present': typeof StudioIdPresentRoute
   '/studio/$id/print': typeof StudioIdPrintRoute
   '/api/assets/$id/$name': typeof ApiAssetsIdNameRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/api/generate'
     | '/api/asset-upload/$id'
     | '/api/export/$id'
+    | '/studio/$id/edit'
     | '/studio/$id/present'
     | '/studio/$id/print'
     | '/api/assets/$id/$name'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/api/generate'
     | '/api/asset-upload/$id'
     | '/api/export/$id'
+    | '/studio/$id/edit'
     | '/studio/$id/present'
     | '/studio/$id/print'
     | '/api/assets/$id/$name'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/api/generate'
     | '/api/asset-upload/$id'
     | '/api/export/$id'
+    | '/studio/$id/edit'
     | '/studio/$id/present'
     | '/studio/$id/print'
     | '/api/assets/$id/$name'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   ApiGenerateRoute: typeof ApiGenerateRoute
   ApiAssetUploadIdRoute: typeof ApiAssetUploadIdRoute
   ApiExportIdRoute: typeof ApiExportIdRoute
+  StudioIdEditRoute: typeof StudioIdEditRoute
   StudioIdPresentRoute: typeof StudioIdPresentRoute
   StudioIdPrintRoute: typeof StudioIdPrintRoute
   ApiAssetsIdNameRoute: typeof ApiAssetsIdNameRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExportIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/studio/$id/edit': {
+      id: '/studio/$id/edit'
+      path: '/studio/$id/edit'
+      fullPath: '/studio/$id/edit'
+      preLoaderRoute: typeof StudioIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/studio/$id/present': {
       id: '/studio/$id/present'
       path: '/studio/$id/present'
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateRoute: ApiGenerateRoute,
   ApiAssetUploadIdRoute: ApiAssetUploadIdRoute,
   ApiExportIdRoute: ApiExportIdRoute,
+  StudioIdEditRoute: StudioIdEditRoute,
   StudioIdPresentRoute: StudioIdPresentRoute,
   StudioIdPrintRoute: StudioIdPrintRoute,
   ApiAssetsIdNameRoute: ApiAssetsIdNameRoute,

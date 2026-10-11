@@ -53,7 +53,7 @@ export function PresentationActions({
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`More actions for ${title}`}
-          className="rounded-lg p-2 text-neutral-400 outline-none hover:bg-neutral-800 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-neutral-500 data-[state=open]:bg-neutral-800 data-[state=open]:text-neutral-100 hover:cursor-pointer"
+          className="rounded-lg p-2 text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-foreground hover:cursor-pointer"
         >
           <EllipsisVertical className="size-4" />
         </DropdownMenuTrigger>
@@ -92,11 +92,11 @@ export function PresentationActions({
             <AlertDialogTitle>Delete “{title}”?</AlertDialogTitle>
             <AlertDialogDescription>
               This permanently removes{" "}
-              <code className="text-neutral-300">presentations/{id}/</code> —
+              <code className="text-foreground/80">presentations/{id}/</code> —
               its story, components and assets. It can’t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction

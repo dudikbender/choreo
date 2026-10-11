@@ -27,6 +27,13 @@ export const getStory = createServerFn({ method: 'GET' })
     return readStory(data.id)
   })
 
+export const layoutStory = createServerFn({ method: 'POST' })
+  .validator(z.object({ title: z.string(), description: z.string().trim().min(1).max(20_000) }))
+  .handler(async ({ data }) => {
+    const { layoutStory } = await import('./layout')
+    return layoutStory(data.title, data.description)
+  })
+
 export const saveStops = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string(), stops: z.array(z.number().min(0)).nullable() }))
   .handler(async ({ data }) => {

@@ -1,5 +1,6 @@
 import { ChevronDown, Pause, Play } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Button } from '~/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -10,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
+import { cn } from '~/lib/utils'
 import { AUTOPLAY_SPEEDS, LOOP_FADE_MS, STEP_DURATIONS, STOP_TIME_LIMITS, STOP_TIME_PRESETS } from './useAutoplay'
 import type { Autoplay, AutoplayMode, AutoplaySpeed } from './useAutoplay'
 
@@ -23,25 +25,25 @@ export function AutoplayControls({ autoplay }: { autoplay: Autoplay }) {
 
   return (
     <div className="flex items-center rounded-full bg-white/5">
-      <button
-        type="button"
-        onClick={toggle}
-        aria-pressed={playing}
-        className="flex items-center gap-2 rounded-full py-2.5 pr-3 pl-4 text-sm font-medium text-neutral-200 hover:bg-white/10"
-      >
-        {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+      <Button type="button" variant="dock" size="pill" onClick={toggle}>
+        {playing ? <Pause /> : <Play />}
         {playing ? 'Pause' : 'Auto-play'}
-      </button>
+      </Button>
       <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label="Playback settings"
-          className="flex items-center gap-1 rounded-full py-2.5 pr-3 pl-2 font-mono text-xs text-neutral-400 outline-none hover:bg-white/10 hover:text-neutral-100 focus-visible:ring-2 focus-visible:ring-neutral-500 data-[state=open]:bg-white/10 data-[state=open]:text-neutral-100"
-        >
-          {speed}×
-          <ChevronDown className="size-3.5" />
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="dock"
+            size="pill"
+            aria-label="Playback settings"
+            className="gap-1 pr-3 pl-2 font-mono text-xs"
+          >
+            {speed}×
+            <ChevronDown className="size-3.5" />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="center" sideOffset={10} className="w-64">
-          <DropdownMenuLabel className="text-xs font-normal text-neutral-500">Mode</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-xs font-normal text-subtle-foreground">Mode</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={mode} onValueChange={(value) => setMode(value as AutoplayMode)}>
             {(Object.keys(MODE_LABELS) as AutoplayMode[]).map((value) => (
               <DropdownMenuRadioItem key={value} value={value}>
@@ -50,7 +52,7 @@ export function AutoplayControls({ autoplay }: { autoplay: Autoplay }) {
             ))}
           </DropdownMenuRadioGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs font-normal text-neutral-500">Speed</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-xs font-normal text-subtle-foreground">Speed</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={String(speed)}
             onValueChange={(value) => setSpeed(Number(value) as AutoplaySpeed)}
@@ -71,11 +73,11 @@ export function AutoplayControls({ autoplay }: { autoplay: Autoplay }) {
           >
             <span className="flex flex-col">
               Loop
-              <span className="text-xs text-neutral-500">Fade back to the start at the end</span>
+              <span className="text-xs text-subtle-foreground">Fade back to the start at the end</span>
             </span>
           </DropdownMenuCheckboxItem>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs font-normal text-neutral-500">
+          <DropdownMenuLabel className="text-xs font-normal text-subtle-foreground">
             Arrow-key steps · time to the next stop
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup
@@ -85,13 +87,13 @@ export function AutoplayControls({ autoplay }: { autoplay: Autoplay }) {
             {STEP_DURATIONS.map(({ seconds, label }) => (
               <DropdownMenuRadioItem key={seconds} value={String(seconds)} onSelect={(event) => event.preventDefault()}>
                 {label}
-                {seconds > 0 && <span className="ml-auto font-mono text-xs text-neutral-500">{seconds}s</span>}
+                {seconds > 0 && <span className="ml-auto font-mono text-xs text-subtle-foreground">{seconds}s</span>}
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>
           <DropdownMenuSeparator />
-          <p className="px-2 py-1.5 text-xs text-neutral-500">
-            Hold <kbd className="rounded border border-neutral-700 px-1 font-mono text-neutral-300">P</kbd> to
+          <p className="px-2 py-1.5 text-xs text-subtle-foreground">
+            Hold <kbd className="rounded border border-input px-1 font-mono text-foreground/80">P</kbd> to
             pause; release to continue. Scrolling yourself stops auto-play.
           </p>
         </DropdownMenuContent>
@@ -116,23 +118,25 @@ function StopTimeField({ autoplay }: { autoplay: Autoplay }) {
 
   return (
     <div className={`px-2 py-1.5 ${disabled ? 'opacity-50' : ''}`}>
-      <label htmlFor="autoplay-stop-time" className="text-xs text-neutral-500">
+      <label htmlFor="autoplay-stop-time" className="text-xs text-subtle-foreground">
         Stop time{disabled && ' · stop to stop only'}
       </label>
       <div className="mt-1.5 flex items-center gap-1">
         {STOP_TIME_PRESETS.map((seconds) => (
-          <button
+          <Button
             key={seconds}
             type="button"
+            variant="dock"
+            size="xs"
             disabled={disabled}
             onClick={() => setStopTime(seconds)}
             aria-pressed={stopTime === seconds}
-            className="rounded-md px-2 py-1 font-mono text-xs text-neutral-300 hover:bg-white/10 aria-pressed:bg-white aria-pressed:text-neutral-950"
+            className="font-mono"
           >
             {seconds}s
-          </button>
+          </Button>
         ))}
-        <div className="ml-auto flex items-center rounded-md border border-neutral-700 focus-within:border-neutral-400">
+        <div className="ml-auto flex items-center rounded-md border border-input focus-within:border-ring">
           <input
             id="autoplay-stop-time"
             type="number"
@@ -150,9 +154,9 @@ function StopTimeField({ autoplay }: { autoplay: Autoplay }) {
               event.stopPropagation()
               if (event.key === 'Enter') commit()
             }}
-            className="w-12 bg-transparent py-1 pl-2 text-right font-mono text-xs text-neutral-100 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-12 bg-transparent py-1 pl-2 text-right font-mono text-xs text-foreground outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
           />
-          <span className="pr-2 pl-0.5 font-mono text-xs text-neutral-500">s</span>
+          <span className="pr-2 pl-0.5 font-mono text-xs text-subtle-foreground">s</span>
         </div>
       </div>
     </div>
@@ -193,21 +197,23 @@ export function FullscreenAutoplayButton({ autoplay }: { autoplay: Autoplay }) {
   const visible = active || hovered
 
   return (
-    <button
+    <Button
       type="button"
+      variant="overlay"
+      size="pill"
       onClick={toggle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      aria-pressed={playing}
       aria-label={playing ? 'Pause auto-play' : 'Start auto-play'}
-      className={`fixed right-6 bottom-6 z-30 flex items-center gap-2 rounded-full bg-neutral-950/70 py-2.5 pr-4 pl-3.5 text-sm font-medium text-neutral-100 shadow-2xl ring-1 ring-white/10 backdrop-blur-md transition-opacity duration-500 hover:bg-neutral-900 focus-visible:opacity-100 ${
-        visible ? 'opacity-100' : 'pointer-events-none opacity-0'
-      }`}
+      className={cn(
+        'fixed right-6 bottom-6 z-30 duration-500 focus-visible:opacity-100',
+        visible ? 'opacity-100' : 'pointer-events-none opacity-0',
+      )}
     >
-      {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+      {playing ? <Pause /> : <Play />}
       {playing ? 'Pause' : 'Auto-play'}
       <kbd className="ml-1 rounded border border-white/15 px-1 font-mono text-[10px] text-neutral-400">hold P</kbd>
-    </button>
+    </Button>
   )
 }
 

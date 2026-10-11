@@ -1,6 +1,9 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
-import { ArrowLeft, Check, KeyRound, Loader2 } from 'lucide-react'
+import { ArrowLeft, Check, KeyRound, Loader2, Palette } from 'lucide-react'
 import { useState } from 'react'
+import { Button } from '~/components/ui/button'
+import { THEMES, useTheme } from '~/lib/theme'
+import type { ThemeId } from '~/lib/theme'
 import { getApiKeyStatus, setApiKey } from '~/server/functions'
 
 export const Route = createFileRoute('/settings')({
@@ -40,19 +43,19 @@ function Settings() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
       <header className="mb-8 flex items-center gap-3">
-        <Link to="/" aria-label="Back" className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100">
+        <Link to="/" aria-label="Back" className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
           <ArrowLeft className="size-5" />
         </Link>
         <h1 className="text-3xl font-semibold tracking-tight select-none">Settings</h1>
       </header>
 
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60">
-        <header className="border-b border-neutral-800 px-6 py-4">
+      <section className="rounded-2xl border border-border bg-card/60">
+        <header className="border-b border-border px-6 py-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <KeyRound className="size-4 text-neutral-400" />
+            <KeyRound className="size-4 text-muted-foreground" />
             Anthropic API key
           </h2>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-subtle-foreground">
             Used to design and modify presentations. It's saved to <code>.env</code> in this project and never sent to the
             browser.
           </p>
@@ -63,26 +66,27 @@ function Settings() {
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-2 text-sm">
                 <span className="size-2 shrink-0 rounded-full bg-emerald-400" />
-                <span className="text-neutral-300">{saved ? 'Saved and verified' : 'Set'}</span>
-                <code className="truncate text-neutral-500">{status.hint}</code>
+                <span className="text-foreground/80">{saved ? 'Saved and verified' : 'Set'}</span>
+                <code className="truncate text-subtle-foreground">{status.hint}</code>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setReplacing(true)
                   setSaved(false)
                 }}
-                className="shrink-0 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800"
               >
                 Replace
-              </button>
+              </Button>
             </div>
           )}
 
           {editing && (
             <form onSubmit={save} className="space-y-3">
               <label className="block">
-                <span className="mb-1.5 block text-sm text-neutral-400">
+                <span className="mb-1.5 block text-sm text-muted-foreground">
                   {status.set ? 'New API key' : 'No key is set yet. Paste one to get started.'}
                 </span>
                 <input
@@ -93,41 +97,37 @@ function Settings() {
                   autoComplete="off"
                   spellCheck={false}
                   autoFocus
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-sm text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-subtle-foreground/70 focus:border-ring focus:outline-none"
                 />
               </label>
               {error && (
-                <p role="alert" className="text-sm text-red-400">
+                <p role="alert" className="text-sm text-red-600 dark:text-red-400">
                   {error}
                 </p>
               )}
               <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={saving || !key.trim()}
-                  className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                <Button type="submit" disabled={saving || !key.trim()}>
+                  {saving ? <Loader2 className="animate-spin" /> : <Check />}
                   {saving ? 'Verifying…' : 'Save key'}
-                </button>
+                </Button>
                 {replacing && (
-                  <button
+                  <Button
                     type="button"
+                    variant="quiet"
                     onClick={() => {
                       setReplacing(false)
                       setKey('')
                       setError(null)
                     }}
-                    className="rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 )}
                 <a
                   href="https://console.anthropic.com/settings/keys"
                   target="_blank"
                   rel="noreferrer"
-                  className="ml-auto text-sm text-neutral-500 underline hover:text-neutral-300"
+                  className="ml-auto text-sm text-subtle-foreground underline hover:text-foreground/80"
                 >
                   Get a key
                 </a>
@@ -136,6 +136,63 @@ function Settings() {
           )}
         </div>
       </section>
+
+      <Appearance />
     </main>
+  )
+}
+
+function Appearance() {
+  const { theme, setTheme } = useTheme()
+
+  return (
+    <section className="mt-6 rounded-2xl border border-border bg-card/60">
+      <header className="border-b border-border px-6 py-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Palette className="size-4 text-muted-foreground" />
+          Appearance
+        </h2>
+        <p className="text-sm text-subtle-foreground">
+          The studio's theme. Presentations keep their own design, and the present-mode controls stay dark.
+        </p>
+      </header>
+
+      <div role="radiogroup" aria-label="Theme" className="grid grid-cols-2 gap-3 px-6 py-5 sm:grid-cols-3">
+        {THEMES.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={theme === id}
+            onClick={() => setTheme(id)}
+            className="group rounded-xl border border-border p-1.5 text-left outline-none hover:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-checked:border-foreground/60 aria-checked:ring-1 aria-checked:ring-foreground/60"
+          >
+            <ThemePreview id={id} />
+            <span className="flex items-center justify-between px-1.5 pt-2 pb-1 text-sm">
+              {label}
+              {theme === id && <Check className="size-4" />}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/** A miniature studio panel drawn with the theme's own tokens. */
+function ThemePreview({ id }: { id: ThemeId }) {
+  return (
+    <div data-theme={id} className="flex h-20 gap-2 rounded-lg border border-border bg-background p-2 text-foreground">
+      <div className="flex flex-1 flex-col gap-1.5 rounded-md border border-border bg-card p-2">
+        <span className="h-1.5 w-3/4 rounded-full bg-foreground/80" />
+        <span className="h-1.5 w-1/2 rounded-full bg-muted-foreground/60" />
+        <span className="mt-auto h-3 w-10 rounded-full bg-primary" />
+      </div>
+      <div className="flex w-1/4 flex-col gap-1.5 py-1">
+        <span className="h-1.5 rounded-full bg-accent" />
+        <span className="h-1.5 rounded-full bg-accent" />
+        <span className="h-1.5 rounded-full bg-accent" />
+      </div>
+    </div>
   )
 }

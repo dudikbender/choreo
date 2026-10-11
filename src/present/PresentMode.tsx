@@ -1,5 +1,6 @@
 import { MapPinOff, PanelLeft, PanelTop } from "lucide-react";
 import { Suspense, memo, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "~/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -11,7 +12,12 @@ import {
 import { componentLoader, variablesOf } from "~/engine/presentations";
 import type { SlideComponent } from "~/engine/presentations";
 import type { Presentation, Variables } from "~/engine/schema";
-import { useComponentStyle, useScrollStore } from "~/engine/scroll-store";
+import {
+  ScrollStoreProvider,
+  useComponentStyle,
+  useScrollStore,
+  useScrollStoreApi,
+} from "~/engine/scroll-store";
 import {
   activePhaseIndex,
   findUnsettledAtPhaseStarts,
@@ -70,15 +76,21 @@ export function useComponentModules(
 const NEXT_KEYS = new Set(["ArrowDown", "ArrowRight", "PageDown", " "]);
 const PREV_KEYS = new Set(["ArrowUp", "ArrowLeft", "PageUp"]);
 
-export function PresentMode({
-  id,
-  config,
-  onConfigSaved,
-}: {
+type PresentModeProps = {
   id: string;
   config: Presentation;
   onConfigSaved: (update: (config: Presentation) => Presentation) => void;
-}) {
+};
+
+export function PresentMode(props: PresentModeProps) {
+  return (
+    <ScrollStoreProvider>
+      <PresentStage {...props} />
+    </ScrollStoreProvider>
+  );
+}
+
+function PresentStage({ id, config, onConfigSaved }: PresentModeProps) {
   const ranges = useMemo(() => layoutPhases(config.phases), [config.phases]);
   const total = trackLength(config.phases);
   const stageSize = parseAspectRatio(config.meta.aspectRatio);
@@ -476,6 +488,7 @@ function PhaseTrack({
   const track = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null);
   const dragging = useRef(false);
+  const scrollStore = useScrollStoreApi();
 
   const [menuStop, setMenuStop] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -514,14 +527,16 @@ function PhaseTrack({
       if (fill.current)
         fill.current.style.transform = `${axis.scale}(${Math.min(offset / total, 1)})`;
     };
-    paint(useScrollStore.getState().offset);
-    return useScrollStore.subscribe(({ offset }) => paint(offset));
-  }, [total, axis.scale]);
+    paint(scrollStore.getState().offset);
+    return scrollStore.subscribe(({ offset }) => paint(offset));
+  }, [scrollStore, total, axis.scale]);
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="quiet"
+        size="icon-sm"
         onClick={toggleOrientation}
         aria-label={
           vertical
@@ -533,14 +548,14 @@ function PhaseTrack({
             ? "Move the timeline to the top"
             : "Move the timeline to the left side"
         }
-        className="fixed top-3 left-3 z-10 flex size-7 items-center justify-center rounded text-neutral-500 hover:cursor-pointer hover:bg-neutral-800/80 hover:text-neutral-100"
+        className="fixed top-3 left-3 z-10"
       >
         {vertical ? (
           <PanelTop size={16} strokeWidth={2} />
         ) : (
           <PanelLeft size={16} strokeWidth={2} />
         )}
-      </button>
+      </Button>
       <div className={`pointer-events-none fixed z-10 ${axis.container}`}>
         <ContextMenu onOpenChange={setMenuOpen}>
           <ContextMenuTrigger
@@ -626,7 +641,7 @@ function PhaseTrack({
           <ContextMenuContent className="w-56">
             {menuStop !== null && (
               <>
-                <ContextMenuLabel className="flex items-baseline justify-between gap-2 text-xs font-normal text-neutral-500">
+                <ContextMenuLabel className="flex items-baseline justify-between gap-2 text-xs font-normal text-subtle-foreground">
                   <span className="truncate">
                     {ranges[activePhaseIndex(ranges, menuStop)].label}
                   </span>

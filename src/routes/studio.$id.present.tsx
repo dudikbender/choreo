@@ -44,12 +44,12 @@ function LivePresentation({ initial }: { initial: LoadResult }) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="text-xl font-semibold">“{result.id}” has an invalid presentation.json</h1>
-        <ul className="mt-4 space-y-1 font-mono text-sm text-red-400">
+        <ul className="mt-4 space-y-1 font-mono text-sm text-red-600 dark:text-red-400">
           {result.errors.map((error) => (
             <li key={error}>{error}</li>
           ))}
         </ul>
-        <Link to="/" className="mt-8 inline-block text-neutral-400 underline">
+        <Link to="/" className="mt-8 inline-block text-muted-foreground underline">
           Back
         </Link>
       </main>

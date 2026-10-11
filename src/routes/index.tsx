@@ -18,7 +18,7 @@ function Home() {
           <h1 className="text-3xl font-semibold tracking-tight select-none">
             Choreo
           </h1>
-          <p className="mt-1 text-neutral-400 select-none">
+          <p className="mt-1 text-muted-foreground select-none">
             Present your story, in scroll motion.
           </p>
         </div>
@@ -27,13 +27,13 @@ function Home() {
             to="/settings"
             aria-label="Settings"
             title="Settings"
-            className="rounded-lg p-2 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <Settings className="size-5" />
           </Link>
           <Link
             to="/design"
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             New presentation
           </Link>

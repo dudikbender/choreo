@@ -24,7 +24,7 @@ choreography.
 
 ## What you can do
 
-- Describe a presentation in plain language and have Claude design it, then
+- Describe a presentation in plain language and have Choreo design it, then
   review every proposed change before it's applied.
 - Refine individual components by asking for changes or editing the code
   directly.

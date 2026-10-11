@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '~/components/ui/button'
 
 /** Read-only review of the whole story layout as it will be saved to story.md. */
 export function StoryMarkdown({
@@ -16,17 +17,17 @@ export function StoryMarkdown({
   return (
     <div className="space-y-4">
       {changes && (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3 text-sm">
-          <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
+        <div className="rounded-lg border border-border bg-background/60 p-3 text-sm">
+          <p className="text-xs font-medium tracking-wide text-subtle-foreground uppercase">
             Changes since last save
           </p>
           {changes.length === 0 ? (
-            <p className="mt-1.5 text-neutral-500">None yet — edit beats or transitions in the Beats view.</p>
+            <p className="mt-1.5 text-subtle-foreground">None yet — edit beats or transitions in the Beats view.</p>
           ) : (
-            <ul className="mt-1.5 space-y-1 text-neutral-300">
+            <ul className="mt-1.5 space-y-1 text-foreground/80">
               {changes.map((change) => (
                 <li key={change} className="flex gap-2">
-                  <span className="text-sky-400">•</span>
+                  <span className="text-sky-600 dark:text-sky-400">•</span>
                   {change}
                 </li>
               ))}
@@ -35,22 +36,23 @@ export function StoryMarkdown({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-800">
-        <div className="flex items-center justify-between gap-3 bg-neutral-900 px-3 py-2">
-          <span className="truncate font-mono text-xs text-neutral-400">{path}</span>
-          <button
+      <div className="overflow-hidden rounded-lg border border-border">
+        <div className="flex items-center justify-between gap-3 bg-card px-3 py-2">
+          <span className="truncate font-mono text-xs text-muted-foreground">{path}</span>
+          <Button
             type="button"
+            variant="quiet"
+            size="xs"
             onClick={async () => {
               await navigator.clipboard.writeText(markdown)
               setCopied(true)
               window.setTimeout(() => setCopied(false), 1500)
             }}
-            className="shrink-0 rounded-md px-2 py-0.5 text-xs text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
           >
             {copied ? 'Copied' : 'Copy'}
-          </button>
+          </Button>
         </div>
-        <pre className="overflow-x-auto bg-neutral-950 px-4 py-3 font-mono text-xs leading-6 whitespace-pre-wrap">
+        <pre className="overflow-x-auto bg-background px-4 py-3 font-mono text-xs leading-6 whitespace-pre-wrap">
           {markdown.split('\n').map((line, i) => (
             <div key={i} className={lineStyle(line)}>
               {line || '\u00a0'}
@@ -63,9 +65,9 @@ export function StoryMarkdown({
 }
 
 function lineStyle(line: string): string {
-  if (/^#\s/.test(line)) return 'font-semibold text-white'
-  if (/^##\s/.test(line)) return 'font-semibold text-neutral-100'
-  if (/^###\s+transition/i.test(line)) return 'text-sky-300'
-  if (/^\s*<!--/.test(line)) return 'text-neutral-600'
-  return 'text-neutral-400'
+  if (/^#\s/.test(line)) return 'font-semibold text-foreground'
+  if (/^##\s/.test(line)) return 'font-semibold text-foreground'
+  if (/^###\s+transition/i.test(line)) return 'text-sky-700 dark:text-sky-300'
+  if (/^\s*<!--/.test(line)) return 'text-subtle-foreground/70'
+  return 'text-muted-foreground'
 }

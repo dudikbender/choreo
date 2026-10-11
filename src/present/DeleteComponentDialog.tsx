@@ -62,19 +62,19 @@ export function DeleteComponentDialog({
           <AlertDialogDescription>
             {sharedFile ? (
               <>
-                Removes it and its keyframes from <code className="text-neutral-300">presentation.json</code>.{' '}
-                <code className="text-neutral-300">{target.file}</code> stays, because another component uses it.
+                Removes it and its keyframes from <code className="text-foreground/80">presentation.json</code>.{' '}
+                <code className="text-foreground/80">{target.file}</code> stays, because another component uses it.
               </>
             ) : (
               <>
-                Removes it and its keyframes from <code className="text-neutral-300">presentation.json</code> and
-                deletes <code className="text-neutral-300">{target.file}</code>. It can’t be undone.
+                Removes it and its keyframes from <code className="text-foreground/80">presentation.json</code> and
+                deletes <code className="text-foreground/80">{target.file}</code>. It can’t be undone.
               </>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {errors.length > 0 && (
-          <ul className="space-y-1 text-sm text-red-400">
+          <ul className="space-y-1 text-sm text-red-600 dark:text-red-400">
             {errors.map((error) => (
               <li key={error}>{error}</li>
             ))}

@@ -5,6 +5,7 @@ import {
   Scripts,
   createRootRoute,
 } from "@tanstack/react-router";
+import { DEFAULT_THEME, THEME_SCRIPT } from "~/lib/theme";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
@@ -18,7 +19,7 @@ export const Route = createRootRoute({
   }),
   component: RootComponent,
   notFoundComponent: () => (
-    <main className="grid min-h-screen place-items-center bg-neutral-950 text-neutral-400">
+    <main className="grid min-h-screen place-items-center bg-background text-muted-foreground">
       Not found.
     </main>
   ),
@@ -34,11 +35,17 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className="dark">
+    <html
+      lang="en"
+      className="dark"
+      data-theme={DEFAULT_THEME}
+      suppressHydrationWarning
+    >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="bg-neutral-950 text-neutral-100 antialiased">
+      <body className="bg-background text-foreground antialiased">
         {children}
         <Scripts />
       </body>

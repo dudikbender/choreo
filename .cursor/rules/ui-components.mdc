@@ -1,0 +1,25 @@
+---
+description: Build UI from the shared component library in src/components/ui
+globs: src/**/*.tsx
+alwaysApply: false
+---
+
+# Use the component library
+
+- Use the components in `src/components/ui/` (`Button`, `Dialog`, `AlertDialog`, `DropdownMenu`, `ContextMenu`) instead of hand-styling raw elements. That way a redesign only touches the library.
+- Choose the look with the `variant` and `size` props. Use `className` only for layout (margins, width, flex), not for colours, borders or padding the variants already define.
+- If no variant fits, add one to the component's `cva` config rather than restyling it at the call site.
+- Missing a component? Add it to `src/components/ui/` in the same shadcn style, then use it.
+- Colour with theme tokens (`bg-background`, `bg-card`, `bg-accent`, `text-foreground`, `text-muted-foreground`, `text-subtle-foreground`, `border-border`, `border-input`, `bg-primary`), never `neutral-*`, `white` or `black`, so the themes in `src/lib/theme.ts` apply. Status colours need a light shade plus a `dark:` one, e.g. `text-red-600 dark:text-red-400`. Only present-mode chrome that floats over slides stays hard-coded dark.
+- Exception: a whole row or card that is clickable (e.g. a disclosure header) can stay a raw `<button>`; it is a layout, not a button.
+
+```tsx
+// ❌ BAD
+<button className="rounded-lg border border-neutral-700 px-2.5 py-1 text-xs text-neutral-200 hover:bg-neutral-800">
+  Describe story
+</button>
+
+// ✅ GOOD
+import { Button } from "~/components/ui/button";
+<Button variant="outline" size="xs">Describe story</Button>
+```

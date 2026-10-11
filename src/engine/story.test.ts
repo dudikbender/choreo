@@ -6,6 +6,7 @@ import {
   serializeStory,
   storyFromPhases,
   storyPhaseMismatches,
+  storyTextEdits,
 } from './story'
 import type { Story } from './story'
 
@@ -74,6 +75,24 @@ describe('story changes', () => {
       'New transition "Freshly roasted" → "Sign up" (left open)',
     ])
     expect(diffStories(before, before)).toEqual([])
+  })
+
+  it('keeps the old and new wording of rewritten text', () => {
+    const before = parseStory(serializeStory(story))
+    const [hero, how, pricing] = before.beats
+    const reworded: Story = {
+      ...before,
+      beats: [{ ...hero, title: 'Freshly roasted', description: 'Big title; beans fall in.', transition: 'Beans swirl.' }, how, pricing],
+    }
+    expect(storyTextEdits(before, reworded)).toEqual([
+      { what: 'beat "Freshly roasted" (phase hero)', before: 'Big title; beans drift in.', after: 'Big title; beans fall in.' },
+      { what: 'transition "Freshly roasted" → "How it works"', before: 'Beans scatter outward.', after: 'Beans swirl.' },
+    ])
+
+    expect(storyTextEdits(before, { ...before, beats: [hero, pricing] })).toEqual([
+      { what: 'beat "How it works" (phase how-it-works), removed', before: how.description, after: '' },
+    ])
+    expect(storyTextEdits(before, before)).toEqual([])
   })
 
   it('checks beats against phases', () => {

@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useId, useRef, useState } from 'react'
+import { Button } from '~/components/ui/button'
 import { AssetsDialog } from '~/home/AssetsDialog'
 import { DesignPanel } from '~/home/DesignPanel'
 import { VariablesDialog } from '~/home/VariablesDialog'
@@ -86,17 +87,9 @@ function DockButton({
   primary?: boolean
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        primary
-          ? 'rounded-full bg-white px-5 py-2.5 text-sm font-medium text-neutral-950 hover:bg-neutral-200'
-          : 'rounded-full px-5 py-2.5 text-sm font-medium text-neutral-200 hover:bg-white/10'
-      }
-    >
+    <Button type="button" variant={primary ? 'dock-primary' : 'dock'} size="pill" onClick={onClick}>
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -144,7 +137,7 @@ function ModifyDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex max-h-[min(880px,calc(100vh-4rem))] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-900 shadow-2xl [&_section]:h-full [&_section]:min-h-0 [&_section]:rounded-none [&_section]:border-0"
+        className="flex max-h-[min(880px,calc(100vh-4rem))] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-input bg-card shadow-2xl [&_section]:h-full [&_section]:min-h-0 [&_section]:rounded-none [&_section]:border-0"
       >
         <span id={titleId} className="sr-only">
           Modify {title}

@@ -1,6 +1,7 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { ArrowLeft, Download, Printer } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '~/components/ui/button'
 import { loadPresentation, variablesOf } from '~/engine/presentations'
 import type { Presentation } from '~/engine/schema'
 import {
@@ -94,14 +95,14 @@ function PrintPages({ id, config, chrome }: { id: string; config: Presentation; 
           return (
             <figure key={`${at}-${index}`} className="m-0 break-after-page print:m-0">
               {chrome && (
-                <figcaption className="mb-2 flex items-baseline gap-2 text-xs text-neutral-500 print:hidden">
-                  <span className="font-medium text-neutral-300">Page {index + 1}</span>
+                <figcaption className="mb-2 flex items-baseline gap-2 text-xs text-subtle-foreground print:hidden">
+                  <span className="font-medium text-foreground/80">Page {index + 1}</span>
                   <span>{phase?.label}</span>
                   <span className="font-mono">@{at.toLocaleString()}</span>
                 </figcaption>
               )}
               <div
-                className={chrome ? 'overflow-hidden rounded-lg shadow-2xl ring-1 ring-white/10 print:rounded-none print:shadow-none print:ring-0' : ''}
+                className={chrome ? 'overflow-hidden rounded-lg shadow-2xl ring-1 ring-border print:rounded-none print:shadow-none print:ring-0' : ''}
                 style={chrome ? { width: width * scale, height: height * scale } : undefined}
               >
                 <div
@@ -163,34 +164,25 @@ function useMarkReady(loaded: boolean, root: React.RefObject<HTMLDivElement | nu
 function Toolbar({ id, title, count }: { id: string; title: string; count: number }) {
   const { exporting, error, exportPdf } = useExportPdf()
   return (
-    <header className="fixed inset-x-0 top-0 z-10 flex items-center gap-3 border-b border-neutral-800 bg-neutral-950/90 px-6 py-3 backdrop-blur print:hidden">
-      <Link to="/" className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100" aria-label="Back">
+    <header className="fixed inset-x-0 top-0 z-10 flex items-center gap-3 border-b border-border bg-background/90 px-6 py-3 backdrop-blur print:hidden">
+      <Link to="/" className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Back">
         <ArrowLeft className="size-4" />
       </Link>
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-sm font-medium">{title}</h1>
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-subtle-foreground">
           {count} page{count === 1 ? '' : 's'} · one per stop point
-          {error && <span className="ml-2 text-red-400">{error}</span>}
+          {error && <span className="ml-2 text-red-600 dark:text-red-400">{error}</span>}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={() => window.print()}
-        className="flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800"
-      >
-        <Printer className="size-4" />
+      <Button type="button" variant="outline" size="sm" onClick={() => window.print()}>
+        <Printer />
         Print…
-      </button>
-      <button
-        type="button"
-        onClick={() => void exportPdf(id)}
-        disabled={exporting}
-        className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50"
-      >
-        <Download className="size-4" />
+      </Button>
+      <Button type="button" size="sm" onClick={() => void exportPdf(id)} disabled={exporting}>
+        <Download />
         {exporting ? 'Exporting…' : 'Download PDF'}
-      </button>
+      </Button>
     </header>
   )
 }

@@ -1,0 +1,22 @@
+---
+description: Icon usage in the UI — never use the Sparkles icon
+alwaysApply: true
+---
+
+# Icons
+
+- **Never use `Sparkles`** (or `Sparkle`, `WandSparkles`, or any other sparkle or "magic" icon) from `lucide-react` or anywhere else. Don't use ✨ emoji in UI copy either.
+- AI actions don't need a "magic" icon. Use an icon that says what the action does, or no icon at all.
+
+```tsx
+// ❌ BAD
+import { Sparkles } from "lucide-react";
+<Sparkles /> Instruct Choreo…
+
+// ✅ GOOD: describes the action
+import { MessageSquareText } from "lucide-react";
+<MessageSquareText /> Instruct Choreo…
+
+// ✅ GOOD: text only
+<button>Describe story</button>
+```
