@@ -5,12 +5,13 @@ export const Route = createFileRoute('/api/export/$id')({
     handlers: {
       GET: async ({ request, params }) => {
         const { exportPdf } = await import('~/server/export')
+        const { downloadName } = await import('~/server/workspace')
         try {
           const pdf = await exportPdf(new URL(request.url).origin, params.id)
           return new Response(new Uint8Array(pdf), {
             headers: {
               'Content-Type': 'application/pdf',
-              'Content-Disposition': `attachment; filename="${params.id}.pdf"`,
+              'Content-Disposition': `attachment; filename="${await downloadName(params.id)}.pdf"`,
               'Cache-Control': 'no-store',
             },
           })

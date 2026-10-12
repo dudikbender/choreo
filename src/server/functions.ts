@@ -69,6 +69,20 @@ export const removePresentation = createServerFn({ method: 'POST' })
     await deletePresentation(data.id)
   })
 
+export const renamePresentation = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string(), title: z.string().trim().min(1).max(200) }))
+  .handler(async ({ data }) => {
+    const { renamePresentation } = await import('./workspace')
+    return renamePresentation(data.id, data.title)
+  })
+
+export const forkPresentation = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string() }))
+  .handler(async ({ data }) => {
+    const { forkPresentation } = await import('./workspace')
+    return forkPresentation(data.id)
+  })
+
 const historyInputSchema = historyEntrySchema.omit({ at: true, outcome: true })
 
 const applySchema = z.object({

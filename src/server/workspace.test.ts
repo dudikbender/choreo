@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 const root = mkdtempSync(path.join(tmpdir(), 'phases-'))
 vi.spyOn(process, 'cwd').mockReturnValue(root)
 
-const { applyChanges, listPresentations } = await import('./workspace')
+const { applyChanges, downloadName, forkPresentation, listPresentations, renamePresentation } = await import('./workspace')
 const { Workspace, componentOpening, runTool, stageStory } = await import('./generate')
 const { validateFolder } = await import('./validate')
 
@@ -350,5 +350,65 @@ describe('tool loop + apply', () => {
     await deletePresentation('demo')
     expect(existsSync(path.join(root, 'presentations/demo'))).toBe(false)
     expect(await listPresentations()).toEqual([])
+  })
+})
+
+describe('forkPresentation', () => {
+  const folder = (id: string) => path.join(root, 'presentations', id)
+
+  beforeAll(() => {
+    mkdirSync(path.join(folder('pitch'), 'components'), { recursive: true })
+    mkdirSync(path.join(folder('pitch'), 'assets'), { recursive: true })
+    writeFileSync(path.join(folder('pitch'), 'presentation.json'), JSON.stringify({ ...config, meta: { ...config.meta, title: 'Pitch' } }))
+    writeFileSync(path.join(folder('pitch'), 'components/title.tsx'), component)
+    writeFileSync(path.join(folder('pitch'), 'assets/logo.png'), 'png')
+    writeFileSync(path.join(folder('pitch'), 'story.md'), '# Pitch\n\nThe theme.\n')
+    writeFileSync(path.join(folder('pitch'), 'history.jsonl'), '{}\n')
+  })
+
+  it('copies the folder under a new title, without its history', async () => {
+    expect(await forkPresentation('pitch')).toEqual({ id: 'pitch-fork', title: 'Pitch (fork)' })
+    const copy = folder('pitch-fork')
+    expect(JSON.parse(readFileSync(path.join(copy, 'presentation.json'), 'utf8')).meta.title).toBe('Pitch (fork)')
+    expect(readFileSync(path.join(copy, 'story.md'), 'utf8')).toBe('# Pitch (fork)\n\nThe theme.\n')
+    expect(readFileSync(path.join(copy, 'components/title.tsx'), 'utf8')).toBe(component)
+    expect(existsSync(path.join(copy, 'assets/logo.png'))).toBe(true)
+    expect(existsSync(path.join(copy, 'history.jsonl'))).toBe(false)
+    expect(JSON.parse(readFileSync(path.join(folder('pitch'), 'presentation.json'), 'utf8')).meta.title).toBe('Pitch')
+  })
+
+  it('numbers later forks', async () => {
+    expect(await forkPresentation('pitch')).toEqual({ id: 'pitch-fork-2', title: 'Pitch (fork 2)' })
+  })
+
+  it('refuses a presentation that does not exist', async () => {
+    await expect(forkPresentation('missing')).rejects.toThrow('does not exist')
+  })
+})
+
+describe('renamePresentation', () => {
+  const folder = (id: string) => path.join(root, 'presentations', id)
+
+  it('changes the title and story heading, and moves the folder to match', async () => {
+    const report = await renamePresentation('pitch-fork', '  Pitch, take two ')
+    expect(report).toMatchObject({ errors: [], id: 'pitch-take-two' })
+    expect(existsSync(folder('pitch-fork'))).toBe(false)
+    expect(JSON.parse(readFileSync(path.join(folder('pitch-take-two'), 'presentation.json'), 'utf8')).meta.title).toBe(
+      'Pitch, take two',
+    )
+    expect(readFileSync(path.join(folder('pitch-take-two'), 'story.md'), 'utf8')).toBe('# Pitch, take two\n\nThe theme.\n')
+    expect(readFileSync(path.join(folder('pitch-take-two'), 'history.jsonl'), 'utf8')).toContain(
+      'Renamed “Pitch (fork)” to “Pitch, take two”.',
+    )
+    expect(await downloadName('pitch-take-two')).toBe('pitch-take-two')
+  })
+
+  it('numbers the folder when the name is taken', async () => {
+    expect(await renamePresentation('pitch-fork-2', 'Pitch')).toMatchObject({ errors: [], id: 'pitch-2' })
+    expect(existsSync(folder('pitch'))).toBe(true)
+  })
+
+  it('refuses an empty title', async () => {
+    expect((await renamePresentation('pitch-take-two', '   ')).errors).toHaveLength(1)
   })
 })

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { download } from './download'
 
-/** Downloads /api/export/<id> as <id>.pdf. */
+/** Downloads /api/export/<id> as a PDF named after the presentation's title. */
 export function useExportPdf() {
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)

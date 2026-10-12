@@ -24,6 +24,7 @@ export const historyEntrySchema = z.object({
     "delete-component",
     "manual-edit",
     "variables",
+    "rename",
   ]),
   outcome: z.enum(["applied", "discarded", "manual"]),
   /** What the designer asked for, in their words (or a description of a manual action). */

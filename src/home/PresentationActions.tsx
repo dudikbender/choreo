@@ -1,10 +1,12 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import {
   EllipsisVertical,
   FileDown,
   FileText,
+  GitFork,
   ImageIcon,
   Loader2,
+  Pencil,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -25,9 +27,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { removePresentation } from "~/server/functions";
+import { forkPresentation, removePresentation } from "~/server/functions";
 import { AssetsDialog } from "./AssetsDialog";
 import { download } from "./download";
+import { RenameDialog } from "./RenameDialog";
 
 export function PresentationActions({
   id,
@@ -37,26 +40,38 @@ export function PresentationActions({
   title: string;
 }) {
   const router = useRouter();
+  const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const [managingAssets, setManagingAssets] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"forking" | "saving" | null>(null);
+  const [menuError, setMenuError] = useState<string | null>(null);
 
-  const save = async () => {
-    setSaving(true);
-    setSaveError(null);
+  /** Keeps the menu open while `task` runs, so its progress and any error show in place. */
+  const run = async (kind: "forking" | "saving", task: () => Promise<void>) => {
+    setBusy(kind);
+    setMenuError(null);
     try {
-      await download(`/api/save/${id}`, `${id}.html`);
+      await task();
       setMenuOpen(false);
     } catch (e) {
-      setSaveError((e as Error).message);
+      setMenuError((e as Error).message);
     } finally {
-      setSaving(false);
+      setBusy(null);
     }
   };
+
+  const fork = () =>
+    run("forking", async () => {
+      const copy = await forkPresentation({ data: { id } });
+      await navigate({ to: "/studio/$id/edit", params: { id: copy.id } });
+    });
+
+  const save = () =>
+    run("saving", () => download(`/api/save/${id}`, `${id}.html`));
 
   const remove = async () => {
     setDeleting(true);
@@ -77,9 +92,9 @@ export function PresentationActions({
       <DropdownMenu
         open={menuOpen}
         onOpenChange={(open) => {
-          if (saving) return;
+          if (busy) return;
           setMenuOpen(open);
-          if (!open) setSaveError(null);
+          if (!open) setMenuError(null);
         }}
       >
         <DropdownMenuTrigger
@@ -89,6 +104,10 @@ export function PresentationActions({
           <EllipsisVertical className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-40">
+          <DropdownMenuItem onSelect={() => setRenaming(true)}>
+            <Pencil />
+            Rename…
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setManagingAssets(true)}>
             <ImageIcon />
             Assets…
@@ -100,22 +119,41 @@ export function PresentationActions({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={saving}
+            disabled={busy !== null}
+            title="Copy this presentation, then give the copy a new instruction"
+            onSelect={(event) => {
+              event.preventDefault();
+              void fork();
+            }}
+          >
+            {busy === "forking" ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <GitFork />
+            )}
+            {busy === "forking" ? "Forking…" : "Fork…"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={busy !== null}
             title="Download a single HTML file that plays on its own, scroll and all"
             onSelect={(event) => {
               event.preventDefault();
               void save();
             }}
           >
-            {saving ? <Loader2 className="animate-spin" /> : <FileDown />}
-            {saving ? "Saving…" : "Save…"}
+            {busy === "saving" ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <FileDown />
+            )}
+            {busy === "saving" ? "Saving…" : "Save…"}
           </DropdownMenuItem>
-          {saveError && (
+          {menuError && (
             <p
               role="alert"
               className="max-w-56 px-2 py-1.5 text-xs text-red-600 dark:text-red-400"
             >
-              {saveError}
+              {menuError}
             </p>
           )}
           <DropdownMenuSeparator />
@@ -165,6 +203,13 @@ export function PresentationActions({
         </AlertDialogContent>
       </AlertDialog>
 
+      {renaming && (
+        <RenameDialog
+          id={id}
+          title={title}
+          onClose={() => setRenaming(false)}
+        />
+      )}
       {managingAssets && (
         <AssetsDialog
           id={id}

@@ -47,6 +47,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       tsconfigPaths: true,
     },
+    // Only src/server/standalone.ts imports these (to build saved HTML files). The dependency
+    // scanner still finds them, and pre-bundling Tailwind's native binary for the browser fails.
+    optimizeDeps: { exclude: ['vite', '@tailwindcss/vite'] },
     plugins: [
       tailwindcss(),
       rescanTailwindOnPresentationChange(),

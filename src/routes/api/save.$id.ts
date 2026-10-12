@@ -5,12 +5,13 @@ export const Route = createFileRoute('/api/save/$id')({
     handlers: {
       GET: async ({ params }) => {
         const { saveHtml } = await import('~/server/standalone')
+        const { downloadName } = await import('~/server/workspace')
         try {
           const { html } = await saveHtml(params.id)
           return new Response(html, {
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
-              'Content-Disposition': `attachment; filename="${params.id}.html"`,
+              'Content-Disposition': `attachment; filename="${await downloadName(params.id)}.html"`,
               'Cache-Control': 'no-store',
             },
           })

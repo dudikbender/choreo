@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { HISTORY_KEEP, HISTORY_PATH, editDiff, historyEntrySchema, parseHistory } from '~/engine/history'
 import type { HistoryEntry, HistoryEntryInput } from '~/engine/history'
 import { presentationSchema } from '~/engine/schema'
 import type { Variables } from '~/engine/schema'
-import { parseStory, storyFromPhases } from '~/engine/story'
+import { parseStory, slugify, storyFromPhases } from '~/engine/story'
 import { variableReferences } from '~/engine/variables'
 import type { Story } from '~/engine/story'
 import { COMPONENT_PATH, CONFIG_PATH, ID_PATTERN, STORY_PATH, isEditablePath, validateFolder } from './validate'
@@ -135,6 +135,66 @@ export async function updateVariables(id: string, variables: Variables): Promise
   return report
 }
 
+/** A free folder name for `title`: its slug, then "-2", "-3", …; `current` counts as free. */
+function idForTitle(title: string, current?: string): string | null {
+  const base = slugify(title)
+  if (!base) return null
+  let id = base
+  for (let n = 2; id !== current && existsSync(path.join(PRESENTATIONS_DIR, id)); n++) id = `${base}-${n}`
+  return id
+}
+
+/**
+ * Changes the title in presentation.json and the story's heading, then moves the folder to
+ * match the new title. Returns the (possibly new) id.
+ */
+export async function renamePresentation(id: string, title: string): Promise<FolderReport & { id: string }> {
+  const next = title.trim()
+  if (!next) return { errors: ['The title can’t be empty'], warnings: [], id }
+  const files = await readEditableFiles(id)
+  const before = files[CONFIG_PATH]
+  const raw = safeJson(before)
+  if (before === undefined || !raw || typeof raw !== 'object') {
+    return { errors: [`${CONFIG_PATH} is missing or not valid JSON`], warnings: [], id }
+  }
+
+  const config = raw as { meta?: Record<string, unknown> }
+  const previous = typeof config.meta?.title === 'string' ? config.meta.title : id
+  if (previous === next) return { ...(await moveToTitle(id, next)), errors: [], warnings: [] }
+  const changes: FileChange[] = [
+    { path: CONFIG_PATH, before, after: `${JSON.stringify({ ...config, meta: { ...config.meta, title: next } }, null, 2)}\n` },
+  ]
+  const story = files[STORY_PATH]
+  if (story !== undefined && /^# .*$/m.test(story)) {
+    changes.push({ path: STORY_PATH, before: story, after: story.replace(/^# .*$/m, `# ${next}`) })
+  }
+
+  const report = await applyChanges(id, changes, { create: false })
+  if (report.errors.length > 0) return { ...report, id }
+  await appendHistory(id, {
+    kind: 'rename',
+    outcome: 'manual',
+    request: `Renamed “${previous}” to “${next}”.`,
+    files: changes.map((c) => c.path),
+  })
+  return { ...report, ...(await moveToTitle(id, next)) }
+}
+
+/** Moves the folder to the title's slug when that differs; a title with no usable slug keeps its folder. */
+async function moveToTitle(id: string, title: string): Promise<{ id: string }> {
+  const target = idForTitle(title, id)
+  if (!target || target === id) return { id }
+  await rename(folderFor(id), folderFor(target))
+  return { id: target }
+}
+
+/** The file name (without extension) for downloads: the title's slug, or the id. */
+export async function downloadName(id: string): Promise<string> {
+  const raw = safeJson(await readFile(path.join(folderFor(id), CONFIG_PATH), 'utf8').catch(() => undefined))
+  const title = (raw as { meta?: { title?: unknown } } | undefined)?.meta?.title
+  return (typeof title === 'string' && slugify(title)) || id
+}
+
 function describeVariableChanges(before: Variables, after: Variables): string {
   const changes = [
     ...Object.entries(after).flatMap(([name, value]) =>
@@ -250,6 +310,41 @@ export async function readHistory(id: string, { limit, component }: { limit: num
 export async function deletePresentation(id: string): Promise<void> {
   if (!presentationExists(id)) throw new Error(`presentation "${id}" does not exist`)
   await rm(folderFor(id), { recursive: true, force: true })
+}
+
+/**
+ * Copies a presentation to a new folder titled "<title> (fork)" (then "(fork 2)", …) and
+ * returns the new id. The copy keeps the components, story and assets but starts with no history.
+ */
+export async function forkPresentation(id: string): Promise<{ id: string; title: string }> {
+  if (!presentationExists(id)) throw new Error(`presentation "${id}" does not exist`)
+  const source = folderFor(id)
+  const raw = safeJson(await readFile(path.join(source, CONFIG_PATH), 'utf8').catch(() => undefined))
+  if (!raw || typeof raw !== 'object') throw new Error(`${CONFIG_PATH} is missing or not valid JSON`)
+  const config = raw as { meta?: Record<string, unknown> }
+  const original = typeof config.meta?.title === 'string' && config.meta.title.trim() ? config.meta.title : id
+
+  let title = `${original} (fork)`
+  let forkId = slugify(title) || `${id}-fork`
+  for (let n = 2; existsSync(path.join(PRESENTATIONS_DIR, forkId)); n++) {
+    title = `${original} (fork ${n})`
+    forkId = slugify(title) || `${id}-fork-${n}`
+  }
+
+  const target = folderFor(forkId)
+  await cp(source, target, {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+    filter: (file) => path.relative(source, file) !== HISTORY_PATH,
+  })
+  await writeFile(path.join(target, CONFIG_PATH), `${JSON.stringify({ ...config, meta: { ...config.meta, title } }, null, 2)}\n`)
+  const storyFile = path.join(target, STORY_PATH)
+  if (existsSync(storyFile)) {
+    const story = await readFile(storyFile, 'utf8')
+    await writeFile(storyFile, story.replace(/^# .*$/m, `# ${title}`))
+  }
+  return { id: forkId, title }
 }
 
 export type PresentationSummary = {
