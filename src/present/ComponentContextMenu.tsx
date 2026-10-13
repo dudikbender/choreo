@@ -28,6 +28,7 @@ import { ComponentCodeDialog } from "./ComponentCodeDialog";
 import { ComponentInstructionDialog } from "./ComponentInstructionDialog";
 import type { ComponentTarget } from "./ComponentInstructionDialog";
 import { DeleteComponentDialog } from "./DeleteComponentDialog";
+import { PhaseInstructionDialog } from "./PhaseInstructionDialog";
 
 export { SLOT_ATTRIBUTE };
 
@@ -118,6 +119,9 @@ export function ComponentContextMenu({
   const [instructing, setInstructing] = useState<ComponentTarget | null>(null);
   const [deleting, setDeleting] = useState<ComponentTarget | null>(null);
   const [editing, setEditing] = useState<ComponentTarget | null>(null);
+  const [instructingPhase, setInstructingPhase] = useState<PhaseRange | null>(
+    null,
+  );
 
   const stops = stopOffsets(config);
   const custom = config.stops !== undefined;
@@ -283,6 +287,20 @@ export function ComponentContextMenu({
             </ContextMenuLabel>
           )}
 
+          {phase && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuLabel className="flex items-baseline justify-between gap-2 text-xs font-normal text-subtle-foreground">
+                <span className="truncate">Phase · {phase.label}</span>
+                <span className="shrink-0 font-mono">{phase.id}</span>
+              </ContextMenuLabel>
+              <ContextMenuItem onSelect={() => setInstructingPhase(phase)}>
+                <MessageSquareText />
+                Instruct Choreo about this phase…
+              </ContextMenuItem>
+            </>
+          )}
+
           <ContextMenuSeparator />
           <ContextMenuLabel className="flex items-baseline justify-between text-xs font-normal text-subtle-foreground">
             <span>
@@ -334,6 +352,14 @@ export function ComponentContextMenu({
           presentationId={presentationId}
           target={instructing}
           onClose={() => setInstructing(null)}
+        />
+      )}
+
+      {instructingPhase && (
+        <PhaseInstructionDialog
+          presentationId={presentationId}
+          phase={instructingPhase}
+          onClose={() => setInstructingPhase(null)}
         />
       )}
 

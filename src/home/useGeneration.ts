@@ -47,7 +47,9 @@ export function historyFor(
     request: state.label,
     ...(request.mode === "component"
       ? { component: request.component, beat: request.beat }
-      : {}),
+      : request.mode === "phase"
+        ? { beat: request.phase }
+        : {}),
     summary: state.summary,
     files: state.changes.map((c) => c.path),
     ...(handEdits.length ? { handEdits } : {}),

@@ -7,7 +7,7 @@ const root = mkdtempSync(path.join(tmpdir(), 'phases-'))
 vi.spyOn(process, 'cwd').mockReturnValue(root)
 
 const { applyChanges, downloadName, forkPresentation, listPresentations, renamePresentation } = await import('./workspace')
-const { Workspace, componentOpening, runTool, stageStory } = await import('./generate')
+const { Workspace, componentOpening, phaseOpening, runTool, stageStory } = await import('./generate')
 const { validateFolder } = await import('./validate')
 
 const component = `import type { CSSProperties } from 'react'
@@ -192,6 +192,41 @@ describe('tool loop + apply', () => {
     expect(opening).toContain('Make it wave')
     expect(componentOpening(ws, { mode: 'component', id: 'demo', component: 'nope', instruction: 'x' })).toEqual({
       error: 'There is no component "nope" in this presentation.',
+    })
+  })
+
+  it('builds a phase-scoped instruction with its beat and the components in it', () => {
+    const twoPhases = {
+      ...config,
+      phases: [
+        { id: 'intro', label: 'Intro', duration: 1000 },
+        { id: 'outro', label: 'Outro', duration: 500 },
+      ],
+      components: [
+        { id: 'title', file: 'components/title.tsx', keyframes: [{ at: 0 }, { at: 1000, opacity: 0 }] },
+        { id: 'bye', file: 'components/bye.tsx', keyframes: [{ at: 0, opacity: 0 }, { at: 1000 }] },
+      ],
+    }
+    const ws = new Workspace(
+      {
+        'presentation.json': JSON.stringify(twoPhases),
+        'story.md':
+          '# Demo\n\n## Hello there\n<!-- phase: intro -->\n\nSay hi.\n\n### Transition\n\nFade into the goodbye.\n\n## Outro\n<!-- phase: outro -->\n',
+      },
+      [],
+    )
+    const opening = phaseOpening(ws, { mode: 'phase', id: 'demo', phase: 'outro', instruction: 'Hold longer' })
+    expect(typeof opening).toBe('string')
+    expect(opening).toContain('phase "Outro" (id outro, offsets 1000–1500; it is the last phase)')
+    expect(opening).toContain('<component id="bye"')
+    expect(opening).toContain('<component id="title"')
+    expect(opening).toContain('Hold longer')
+
+    const intro = phaseOpening(ws, { mode: 'phase', id: 'demo', phase: 'intro', instruction: 'x' })
+    expect(intro).toContain('Say hi.')
+    expect(intro).toContain('### Transition\nFade into the goodbye.')
+    expect(phaseOpening(ws, { mode: 'phase', id: 'demo', phase: 'nope', instruction: 'x' })).toEqual({
+      error: 'There is no phase "nope" in this presentation.',
     })
   })
 

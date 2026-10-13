@@ -295,14 +295,19 @@ export async function readComponentSource(id: string, file: string): Promise<str
   return source
 }
 
-/** The most recent history entries, oldest first; optionally only those touching one component. */
-export async function readHistory(id: string, { limit, component }: { limit: number; component?: string }): Promise<HistoryEntry[]> {
+/** The most recent history entries, oldest first; optionally only those touching one component or phase. */
+export async function readHistory(
+  id: string,
+  { limit, component, phase }: { limit: number; component?: string; phase?: string },
+): Promise<HistoryEntry[]> {
   const file = path.join(folderFor(id), HISTORY_PATH)
   if (!existsSync(file)) return []
   const entries = parseHistory(await readFile(file, 'utf8'))
   const relevant = component
     ? entries.filter((e) => e.component === component || e.files.some((f) => f === `components/${component}.tsx`))
-    : entries
+    : phase
+      ? entries.filter((e) => e.kind === 'phase' && e.beat === phase)
+      : entries
   return relevant.slice(-limit)
 }
 

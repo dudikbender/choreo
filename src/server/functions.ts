@@ -114,10 +114,10 @@ export const recordDiscard = createServerFn({ method: 'POST' })
   })
 
 export const getHistory = createServerFn({ method: 'GET' })
-  .validator(z.object({ id: z.string(), component: z.string().optional() }))
+  .validator(z.object({ id: z.string(), component: z.string().optional(), phase: z.string().optional() }))
   .handler(async ({ data }) => {
     const { readHistory } = await import('./workspace')
-    return readHistory(data.id, { limit: HISTORY_KEEP, component: data.component })
+    return readHistory(data.id, { limit: HISTORY_KEEP, component: data.component, phase: data.phase })
   })
 
 export const getAssets = createServerFn({ method: 'GET' })

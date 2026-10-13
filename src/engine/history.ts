@@ -21,6 +21,7 @@ export const historyEntrySchema = z.object({
     "create",
     "story",
     "component",
+    "phase",
     "delete-component",
     "manual-edit",
     "variables",
@@ -81,7 +82,11 @@ const OUTCOME_LABELS: Record<HistoryEntry["outcome"], string> = {
 export function formatHistory(entries: HistoryEntry[]): string {
   if (entries.length === 0) return "";
   const items = entries.map((entry, i) => {
-    const scope = entry.component ? ` component="${entry.component}"` : "";
+    const scope = entry.component
+      ? ` component="${entry.component}"`
+      : entry.kind === "phase" && entry.beat
+        ? ` phase="${entry.beat}"`
+        : "";
     const parts = [
       `<change n="${i + 1}" at="${entry.at}" kind="${entry.kind}"${scope} outcome="${OUTCOME_LABELS[entry.outcome]}">`,
     ];

@@ -25,39 +25,46 @@ function timeAgo(iso: string): string {
 }
 
 /**
- * Earlier changes to a presentation (or one component), newest first. The most recent ones
- * are what Choreo sees as context with the next request.
+ * Earlier changes to a presentation (or one component or phase), newest first. The most
+ * recent ones are what Choreo sees as context with the next request.
  */
 export function HistoryList({
   id,
   component,
+  phase,
 }: {
   id: string;
   component?: string;
+  phase?: string;
 }) {
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    getHistory({ data: { id, component } })
+    getHistory({ data: { id, component, phase } })
       .then((result) => !cancelled && setEntries(result))
       .catch(() => !cancelled && setEntries([]));
     return () => {
       cancelled = true;
     };
-  }, [id, component]);
+  }, [id, component, phase]);
 
   if (!entries || entries.length === 0) return null;
   const newestFirst = [...entries].reverse();
+  const scoped = component || phase;
 
   return (
     <details className="group rounded-lg border border-border">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm text-foreground/80 select-none hover:text-foreground [&::-webkit-details-marker]:hidden">
         <ChevronRight className="size-4 text-subtle-foreground transition-transform group-open:rotate-90" />
-        {component ? "Earlier changes to this component" : "Recent changes"}
+        {component
+          ? "Earlier changes to this component"
+          : phase
+            ? "Earlier changes to this phase"
+            : "Recent changes"}
         <span className="text-subtle-foreground">· {entries.length}</span>
         <span className="ml-auto text-xs text-subtle-foreground">
-          {component
+          {scoped
             ? "Choreo sees recent changes"
             : `Choreo sees the last ${Math.min(HISTORY_CONTEXT_LIMIT, entries.length)}`}
         </span>

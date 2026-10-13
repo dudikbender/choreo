@@ -53,10 +53,19 @@ const componentRequestSchema = z.object({
   instruction: z.string().trim().min(1),
 })
 
-export const generateRequestSchema = z.union([storyRequestSchema, componentRequestSchema])
+/** An instruction scoped to one phase (story beat), e.g. from right-clicking the stage in present mode. */
+const phaseRequestSchema = z.object({
+  mode: z.literal('phase'),
+  id: z.string().regex(ID_PATTERN),
+  phase: z.string().regex(ID_PATTERN),
+  instruction: z.string().trim().min(1),
+})
+
+export const generateRequestSchema = z.union([storyRequestSchema, componentRequestSchema, phaseRequestSchema])
 export type GenerateRequest = z.infer<typeof generateRequestSchema>
 export type StoryRequest = z.infer<typeof storyRequestSchema>
 export type ComponentRequest = z.infer<typeof componentRequestSchema>
+export type PhaseRequest = z.infer<typeof phaseRequestSchema>
 
 export type TokenUsage = {
   input: number
@@ -458,7 +467,9 @@ export async function generate(
   const opening =
     request.mode === 'component'
       ? componentOpening(ws, request)
-      : (stageStory(ws, request) ?? { error: 'Nothing to change — edit a beat or add direction first.' })
+      : request.mode === 'phase'
+        ? phaseOpening(ws, request)
+        : (stageStory(ws, request) ?? { error: 'Nothing to change — edit a beat or add direction first.' })
   if (typeof opening !== 'string') {
     emit({ type: 'error', message: opening.error })
     return
@@ -685,6 +696,53 @@ export function componentOpening(ws: Workspace, request: ComponentRequest): stri
     `On stage at the rest frame of: ${onStage.length ? onStage.join(', ') : 'no beat (it is only visible mid-transition)'}.`,
     `Instruction:\n${request.instruction}`,
     `Keep the change focused on this component's file and its entry in ${CONFIG_PATH}. Touch other components only if the instruction requires it (e.g. its new position collides with a neighbor). The story layout is unchanged unless the instruction says otherwise. You already have this component's source and keyframes, so edit it directly with str_replace.`,
+  ].join('\n\n')
+}
+
+/**
+ * Builds the opening message for an instruction scoped to one phase: its range, its beat in
+ * the story, and the keyframes of every component on stage or moving during it.
+ */
+export function phaseOpening(ws: Workspace, request: PhaseRequest): string | { error: string } {
+  const parsed = presentationSchema.safeParse(safeJson(ws.get(CONFIG_PATH)))
+  if (!parsed.success) return { error: `${CONFIG_PATH} is not valid, so phases can't be edited one at a time.` }
+  const config = parsed.data
+  const ranges = layoutPhases(config.phases)
+  const index = ranges.findIndex((r) => r.id === request.phase)
+  if (index === -1) return { error: `There is no phase "${request.phase}" in this presentation.` }
+  const range = ranges[index]
+  const next = ranges[index + 1]
+
+  const story = ws.get(STORY_PATH)
+  const beats = story ? parseStory(story).beats : []
+  const beat = beats.find((b) => b.id === range.id)
+  const beatBlock = beat
+    ? [
+        `<beat id="${beat.id}" title="${beat.title}">`,
+        beat.description.trim() || '(no description)',
+        ...(next && beat.transition.trim() ? [`### Transition\n${beat.transition.trim()}`] : []),
+        `</beat>`,
+      ].join('\n')
+    : `${STORY_PATH} has no beat for this phase.`
+
+  const involved = config.components.filter((component) => {
+    const keyframes = resolveKeyframes(component.keyframes)
+    const visible = [range.start, (range.start + range.end) / 2, range.end].some(
+      (at) => poseAt(keyframes, at).opacity > 0.05,
+    )
+    const moving = component.keyframes.some((kf) => kf.at >= range.start && kf.at <= range.end)
+    return visible || moving
+  })
+  const componentList = involved.length
+    ? involved.map((c) => `<component id="${c.id}" file="${c.file}">\n${JSON.stringify(c.keyframes)}\n</component>`)
+    : ['No components are on stage or moving during this phase.']
+
+  return [
+    `Modify the presentation in folder "${request.id}". The designer gave an instruction scoped to the phase "${range.label}" (id ${range.id}, offsets ${range.start}–${range.end}${next ? `; the next phase "${next.label}" starts at ${next.start}` : '; it is the last phase'}).`,
+    beatBlock,
+    `Components on stage or moving during this phase, with their keyframes:\n${componentList.join('\n')}`,
+    `Instruction:\n${request.instruction}`,
+    `Keep the change focused on this phase: its rest frame, the components and keyframes between ${range.start} and ${range.end}, and the transition into the next phase. Changing this phase's duration shifts every later keyframe and stop, so shift them to match. Read the component sources you need before editing. Update this beat in ${STORY_PATH} only if the instruction changes what the viewer should see. Leave other phases as they are.`,
   ].join('\n\n')
 }
 
